@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, CreditCard, MapPin, Calendar, BookOpen, Heart, Users, Briefcase } from 'lucide-react';
+import { X, User, CreditCard, MapPin, Calendar, BookOpen, Heart, Users, Briefcase, RefreshCcw, CheckCircle2 } from 'lucide-react';
 import { Resident } from '../types';
 import { calculateAge } from '../lib/utils';
+import { format } from 'date-fns';
 
 interface ResidentDetailProps {
   isOpen: boolean;
@@ -70,11 +71,26 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
               <DetailItem icon={Heart} label="Status Perkawinan" value={resident.maritalStatus} color="text-pink-400" />
             </div>
             
-            <div className="mt-6 p-4 bg-indigo-600/10 rounded-xl border border-indigo-500/20">
-              <p className="text-[10px] text-slate-500 italic mb-1">Status Sinkronisasi Data:</p>
+            <div className={`mt-6 p-4 rounded-xl border ${resident.updatedAt ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-amber-500/5 border-amber-500/20'}`}>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
+                Status Sinkronisasi
+              </p>
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                <span className="text-xs font-bold text-slate-300">Tersimpan di Cloud Storage</span>
+                {resident.updatedAt ? (
+                  <>
+                    <CheckCircle2 size={14} className="text-emerald-500" />
+                    <span className="text-xs font-semibold text-emerald-400">
+                      Tersinkronisasi pada {resident.updatedAt.toDate ? format(resident.updatedAt.toDate(), 'dd/MM/yyyy HH:mm') : format(new Date(resident.updatedAt), 'dd/MM/yyyy HH:mm')}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCcw size={14} className="text-amber-500 animate-spin-slow" />
+                    <span className="text-xs font-semibold text-amber-500">
+                      Tersimpan Lokal - Menunggu Sinkronisasi
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>

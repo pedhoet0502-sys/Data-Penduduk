@@ -417,6 +417,7 @@ export default function App() {
                     setViewingResident(r);
                     setIsDetailOpen(true);
                   }}
+                  onUpdate={handleSubmitResident}
                 />
               ))}
             </AnimatePresence>
