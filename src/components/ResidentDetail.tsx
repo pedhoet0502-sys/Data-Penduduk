@@ -71,26 +71,34 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
               <DetailItem icon={Heart} label="Status Perkawinan" value={resident.maritalStatus} color="text-pink-400" />
             </div>
             
-            <div className={`mt-6 p-4 rounded-xl border ${resident.updatedAt ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-amber-500/5 border-amber-500/20'}`}>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
-                Status Sinkronisasi
-              </p>
-              <div className="flex items-center gap-2">
-                {resident.updatedAt ? (
-                  <>
-                    <CheckCircle2 size={14} className="text-emerald-500" />
-                    <span className="text-xs font-semibold text-emerald-400">
-                      Tersinkronisasi pada {resident.updatedAt.toDate ? format(resident.updatedAt.toDate(), 'dd/MM/yyyy HH:mm') : format(new Date(resident.updatedAt), 'dd/MM/yyyy HH:mm')}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <RefreshCcw size={14} className="text-amber-500 animate-spin-slow" />
-                    <span className="text-xs font-semibold text-amber-500">
-                      Tersimpan Lokal - Menunggu Sinkronisasi
-                    </span>
-                  </>
-                )}
+            <div className={`mt-8 overflow-hidden rounded-2xl border transition-all duration-500 ${resident.updatedAt ? 'bg-emerald-500/5 border-emerald-500/20 shadow-lg shadow-emerald-500/5' : 'bg-amber-500/5 border-amber-500/20 shadow-lg shadow-amber-500/5 pulse-amber'}`}>
+              <div className="flex items-center justify-between p-4 bg-white/5 border-b border-white/5">
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest flex items-center gap-2">
+                   {resident.updatedAt ? <CheckCircle2 size={12} className="text-emerald-500" /> : <RefreshCcw size={12} className="text-amber-500 animate-spin-slow" />}
+                   Integritas Data
+                </p>
+                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter ${resident.updatedAt ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-500'}`}>
+                  {resident.updatedAt ? 'Cloud Verified' : 'Local Draft'}
+                </span>
+              </div>
+              <div className="p-4">
+                <div className="flex flex-col gap-1">
+                  {resident.updatedAt ? (
+                    <>
+                      <p className="text-xs font-bold text-white">Data Tersinkronisasi</p>
+                      <p className="text-[11px] text-slate-400">
+                        Pembaruan terakhir terekam pada: <span className="text-emerald-400 font-mono">{resident.updatedAt.toDate ? format(resident.updatedAt.toDate(), 'dd MMM yyyy, HH:mm') : format(new Date(resident.updatedAt), 'dd MMM yyyy, HH:mm')}</span>
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-xs font-bold text-white">Tersimpan Lokal</p>
+                      <p className="text-[11px] text-slate-400">
+                        Data menunggu koneksi stabil untuk sinkronisasi ke server pusat.
+                      </p>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { User, CreditCard, Calendar, MapPin, Trash2, Edit2, ChevronRight, Zap, Check, X } from 'lucide-react';
+import { User, CreditCard, Calendar, MapPin, Trash2, Edit2, ChevronRight, Zap, Check, X, RefreshCcw, CheckCircle2 } from 'lucide-react';
 import { Resident } from '../types';
 import { calculateAge, MARITAL_STATUSES, FAMILY_POSITIONS } from '../lib/utils';
 
@@ -63,9 +63,22 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
               <User size={24} />
             )}
           </div>
-          <div>
-            <p className="text-[10px] text-indigo-400 font-mono mb-0.5">NIK: {resident.nik}</p>
-            <h3 className="font-bold text-slate-100 text-base">{resident.fullName}</h3>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 mb-0.5">
+              <p className="text-[10px] text-indigo-400 font-mono">NIK: {resident.nik}</p>
+              {resident.updatedAt ? (
+                <div className="flex items-center gap-1" title="Tersinkronisasi">
+                  <CheckCircle2 size={10} className="text-emerald-500" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                </div>
+              ) : (
+                <div className="flex items-center gap-1" title="Tersimpan Lokal">
+                  <RefreshCcw size={10} className="text-amber-500 animate-spin-slow" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                </div>
+              )}
+            </div>
+            <h3 className="font-bold text-slate-100 text-base leading-tight">{resident.fullName}</h3>
           </div>
         </div>
         <div className="flex gap-1">

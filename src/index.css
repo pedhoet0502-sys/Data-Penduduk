@@ -5,6 +5,15 @@
   --color-primary: #4f46e5; /* indigo-600 */
   --color-primary-hover: #6366f1; /* indigo-500 */
   --animate-spin-slow: spin 3s linear infinite;
+  
+  @keyframes pulse-amber {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+}
+
+.pulse-amber {
+  animation: pulse-amber 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 @layer base {
