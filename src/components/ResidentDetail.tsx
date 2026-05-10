@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, CreditCard, MapPin, Calendar, BookOpen, Heart, Users, Briefcase, RefreshCcw, CheckCircle2 } from 'lucide-react';
+import { X, User, CreditCard, MapPin, Calendar, Scroll, Heart, Users, Briefcase, RefreshCcw, CheckCircle2, GraduationCap } from 'lucide-react';
 import { Resident } from '../types';
 import { calculateAge } from '../lib/utils';
 import { format } from 'date-fns';
@@ -16,14 +16,14 @@ interface ResidentDetailProps {
 export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose, resident, onEdit, onDelete }) => {
   if (!resident || !isOpen) return null;
 
-  const DetailItem = ({ icon: Icon, label, value, color = "text-indigo-400" }: any) => (
-    <div className="flex gap-4 p-4 rounded-xl bg-slate-950/30 border border-white/5">
+  const DetailItem = ({ icon: Icon, label, value, color = "text-indigo-400", truncate = false }: any) => (
+    <div className="flex gap-4 p-4 rounded-xl bg-slate-950/30 border border-white/5 min-w-0">
       <div className={`w-10 h-10 ${color.replace('text', 'bg')}/10 rounded-lg flex items-center justify-center ${color} shrink-0`}>
         <Icon size={20} />
       </div>
-      <div>
+      <div className="min-w-0 overflow-hidden">
         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">{label}</p>
-        <p className="text-sm font-semibold text-white">{value || '-'}</p>
+        <p className={`text-sm font-semibold text-white ${truncate ? 'truncate' : ''}`} title={value || '-'}>{value || '-'}</p>
       </div>
     </div>
   );
@@ -64,11 +64,11 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
               <DetailItem icon={CreditCard} label="Nomor KK" value={resident.kkNumber} />
               <DetailItem icon={Users} label="Status Keluarga" value={resident.familyPosition} />
               <DetailItem icon={MapPin} label="Tempat Lahir" value={resident.birthPlace} color="text-amber-400" />
-              <DetailItem icon={Calendar} label="Tanggal Lahir" value={`${new Date(resident.birthDate).toLocaleDateString()} (${calculateAge(resident.birthDate)} Thn)`} color="text-emerald-400" />
+              <DetailItem icon={Calendar} label="Tanggal Lahir" value={`${format(new Date(resident.birthDate), 'dd/MM/yyyy')} (${calculateAge(resident.birthDate)} Thn)`} color="text-emerald-400" />
               <DetailItem icon={User} label="Jenis Kelamin" value={resident.gender} color="text-blue-400" />
-              <DetailItem icon={BookOpen} label="Agama" value={resident.religion} color="text-purple-400" />
-              <DetailItem icon={Briefcase} label="Pendidikan" value={resident.education} color="text-rose-400" />
-              <DetailItem icon={Briefcase} label="Pekerjaan" value={resident.occupation} color="text-cyan-400" />
+              <DetailItem icon={Scroll} label="Agama" value={resident.religion} color="text-indigo-300" />
+              <DetailItem icon={GraduationCap} label="Pendidikan" value={resident.education} color="text-rose-400" />
+              <DetailItem icon={Briefcase} label="Pekerjaan" value={resident.occupation} color="text-cyan-400" truncate={true} />
               <DetailItem icon={Heart} label="Status Perkawinan" value={resident.maritalStatus} color="text-pink-400" />
             </div>
             

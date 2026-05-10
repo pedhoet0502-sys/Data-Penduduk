@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { User, CreditCard, Calendar, MapPin, Trash2, Edit2, ChevronRight, Zap, Check, X, RefreshCcw, CheckCircle2 } from 'lucide-react';
 import { Resident } from '../types';
 import { calculateAge, MARITAL_STATUSES, FAMILY_POSITIONS } from '../lib/utils';
+import { format } from 'date-fns';
 
 interface ResidentCardProps {
   resident: Resident;
@@ -134,7 +135,7 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
         </div>
         <div className="flex flex-col">
           <span className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Tempat, Tgl Lahir</span>
-          <span className="text-sm font-medium text-slate-300 line-clamp-1">{resident.birthPlace}, {new Date(resident.birthDate).toLocaleDateString()}</span>
+          <span className="text-sm font-medium text-slate-300 line-clamp-1">{resident.birthPlace}, {format(new Date(resident.birthDate), 'dd/MM/yyyy')}</span>
         </div>
         <div className="flex flex-col">
           <span className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Usia</span>

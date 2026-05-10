@@ -219,8 +219,9 @@ export default function App() {
                <Fingerprint size={40} />
              </div>
           </div>
-          <h1 className="text-3xl font-black text-white mb-3 tracking-tight">SIDAK RI</h1>
-          <p className="text-slate-400 mb-10 leading-relaxed">Sistem Data Kependudukan Terpadu. Kelola data penduduk dengan aman dan praktis.</p>
+          <h1 className="text-3xl font-black text-white mb-3 tracking-tight text-center">DATA WARGA</h1>
+          <h2 className="text-xl font-bold text-indigo-400 mb-3 tracking-tight text-center">RT 05 RW 02</h2>
+          <p className="text-slate-400 mb-10 leading-relaxed">Sistem informasi manajemen warga terpadu. Kelola data dengan aman dan praktis.</p>
           
           <button
             onClick={handleSignIn}
@@ -248,7 +249,7 @@ export default function App() {
           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
             <Fingerprint size={18} />
           </div>
-          <h1 className="font-bold text-lg text-white tracking-tight">SIDAK <span className="font-normal text-slate-400 text-sm hidden sm:inline">| Sistem Data Kependudukan</span></h1>
+          <h1 className="font-bold text-lg text-white tracking-tight uppercase">RT 05 RW 02 <span className="font-normal text-slate-400 text-sm hidden sm:inline">| Data Warga</span></h1>
         </div>
         <div className="flex items-center gap-2">
           <button

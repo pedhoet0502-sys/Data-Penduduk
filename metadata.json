@@ -1,6 +1,6 @@
 {
-  "name": "Data Penduduk Mobile",
-  "description": "Aplikasi pendataan penduduk dengan fitur CRUD dan pencarian, dioptimalkan untuk perangkat mobile.",
+  "name": "DATA WARGA RT 05 RW 02",
+  "description": "Sistem informasi manajemen data warga RT 05 RW 02 dengan fitur statistik demografi dan pendataan lengkap.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }
