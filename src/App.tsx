@@ -14,13 +14,14 @@ import {
 } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Search, LogOut, LogIn, Database, Users, Fingerprint, RefreshCcw, CheckCircle2, Filter, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { Plus, Search, LogOut, LogIn, Database, Users, Fingerprint, RefreshCcw, CheckCircle2, Filter, SlidersHorizontal, ChevronDown, BarChart3, TrendingUp } from 'lucide-react';
 import { db, auth } from './lib/firebase';
 import { Resident, Gender } from './types';
 import { RELIGIONS, EDUCATIONS } from './lib/utils';
 import { ResidentCard } from './components/ResidentCard';
 import { ResidentForm } from './components/ResidentForm';
 import { ResidentDetail } from './components/ResidentDetail';
+import { StatsDashboard } from './components/StatsDashboard';
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { handleFirestoreError, OperationType } from './lib/error-handler';
 
@@ -40,6 +41,7 @@ export default function App() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [editingResident, setEditingResident] = useState<Resident | null>(null);
   const [viewingResident, setViewingResident] = useState<Resident | null>(null);
   const [residentIdToDelete, setResidentIdToDelete] = useState<string | null>(null);
@@ -126,20 +128,30 @@ export default function App() {
 
   const handleSubmitResident = async (data: Partial<Resident>) => {
     if (!user) return;
+    setSyncing(true);
 
-    // Filter out 'id' and other client-side fields to satisfy security rules
+    const residentId = editingResident?.id || (data as any).id;
+    const isUpdate = !!residentId;
+
+    // Filter out 'id' and ensure essential fields exist for legacy data consistency
     const { id, ...residentData } = data as any;
+    
+    // Add defaults for fields that might be missing in legacy records
+    const payload = {
+      ...residentData,
+    };
+    if (!payload.occupation) payload.occupation = 'Belum/Tidak Bekerja';
 
     try {
-      if (editingResident) {
-        const docRef = doc(db, 'residents', editingResident.id);
+      if (isUpdate) {
+        const docRef = doc(db, 'residents', residentId);
         await updateDoc(docRef, {
-          ...residentData,
+          ...payload,
           updatedAt: serverTimestamp(),
         });
       } else {
         await addDoc(collection(db, 'residents'), {
-          ...residentData,
+          ...payload,
           ownerId: user.uid,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -148,7 +160,9 @@ export default function App() {
       setIsFormOpen(false);
       setEditingResident(null);
     } catch (error) {
-      handleFirestoreError(error, editingResident ? OperationType.UPDATE : OperationType.CREATE, 'residents');
+      handleFirestoreError(error, isUpdate ? OperationType.UPDATE : OperationType.CREATE, isUpdate ? `residents/${residentId}` : 'residents');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -238,6 +252,13 @@ export default function App() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setIsStatsOpen(true)}
+            className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-all"
+            title="Lihat Statistik"
+          >
+            <BarChart3 size={18} />
+          </button>
+          <button
             onClick={handleManualSync}
             disabled={syncing || !isOnline}
             className={`p-2 rounded-lg transition-all ${syncing ? 'text-indigo-400 animate-spin' : (!isOnline ? 'text-slate-600 cursor-not-allowed' : 'text-slate-400 hover:text-white')}`}
@@ -290,18 +311,24 @@ export default function App() {
           </div>
         )}
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="bg-slate-900/40 p-4 rounded-3xl border border-white/10 shadow-sm">
+        <div className="grid grid-cols-2 gap-4 mb-8 cursor-pointer group" onClick={() => setIsStatsOpen(true)}>
+          <div className="bg-slate-900/40 p-4 rounded-3xl border border-white/10 shadow-sm group-hover:border-indigo-500/50 transition-all">
             <span className="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-1 block">Total Warga</span>
-            <span className="text-3xl font-black text-white">{residents.length}</span>
+            <div className="flex items-end justify-between">
+              <span className="text-3xl font-black text-white">{residents.length}</span>
+              <BarChart3 size={16} className="text-slate-600 group-hover:text-indigo-400 mb-1" />
+            </div>
           </div>
-          <div className="bg-indigo-600 p-4 rounded-3xl shadow-lg shadow-indigo-600/20 text-white">
+          <div className="bg-indigo-600 p-4 rounded-3xl shadow-lg shadow-indigo-600/20 text-white group-hover:bg-indigo-500 transition-all">
             <span className="text-[10px] uppercase font-bold text-indigo-200 tracking-widest mb-1 block">Data Baru</span>
-            <span className="text-3xl font-black">{residents.filter(r => {
-              const created = r.createdAt?.toDate();
-              if (!created) return false;
-              return (new Date().getTime() - created.getTime()) < 24 * 60 * 60 * 1000;
-            }).length}</span>
+            <div className="flex items-end justify-between">
+              <span className="text-3xl font-black">{residents.filter(r => {
+                const created = r.createdAt?.toDate ? r.createdAt.toDate() : (r.createdAt ? new Date(r.createdAt) : null);
+                if (!created) return false;
+                return (new Date().getTime() - created.getTime()) < 24 * 60 * 60 * 1000;
+              }).length}</span>
+              <TrendingUp size={16} className="text-indigo-300 mb-1" />
+            </div>
           </div>
         </div>
 
@@ -486,6 +513,13 @@ export default function App() {
         message="Data yang dihapus tidak dapat dikembalikan. Apakah Anda yakin ingin melanjutkan?"
         confirmText="Hapus"
         cancelText="Batal"
+      />
+
+      {/* Stats Dashboard */}
+      <StatsDashboard
+        isOpen={isStatsOpen}
+        onClose={() => setIsStatsOpen(false)}
+        residents={residents}
       />
     </div>
   );

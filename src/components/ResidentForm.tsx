@@ -6,7 +6,7 @@ import { id } from 'date-fns/locale';
 import { format, parseISO, isValid } from 'date-fns';
 import "react-datepicker/dist/react-datepicker.css";
 import { Gender, Resident } from '../types';
-import { RELIGIONS, EDUCATIONS, MARITAL_STATUSES, FAMILY_POSITIONS, calculateAge } from '../lib/utils';
+import { RELIGIONS, EDUCATIONS, MARITAL_STATUSES, FAMILY_POSITIONS, OCCUPATIONS, calculateAge } from '../lib/utils';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../lib/firebase';
 
@@ -44,6 +44,7 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
     education: EDUCATIONS[0],
     maritalStatus: MARITAL_STATUSES[0],
     familyPosition: FAMILY_POSITIONS[0],
+    occupation: OCCUPATIONS[0],
     photoUrl: '',
   });
 
@@ -68,6 +69,7 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
         education: EDUCATIONS[3], // Default SMA
         maritalStatus: MARITAL_STATUSES[0],
         familyPosition: FAMILY_POSITIONS[0],
+        occupation: OCCUPATIONS[0],
         photoUrl: '',
       });
       setPreviewUrl(null);
@@ -144,6 +146,10 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
     }
     if (!formData.familyPosition) {
       setError('Pilih Status Hubungan dalam Keluarga');
+      return;
+    }
+    if (!formData.occupation) {
+      setError('Pilih Pekerjaan');
       return;
     }
 
@@ -384,6 +390,20 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
                   id="select-family"
                 >
                   {FAMILY_POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-1 col-span-2">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">Pekerjaan</label>
+                <select
+                  name="occupation"
+                  value={formData.occupation}
+                  onChange={handleInputChange}
+                  className="w-full bg-slate-950/50 border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-indigo-500"
+                  id="select-occupation"
+                  required
+                >
+                  {OCCUPATIONS.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
             </div>

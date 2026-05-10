@@ -15,20 +15,23 @@ service cloud.firestore {
 
     // Resident Validation
     function isValidResident(data) {
-      return data.keys().hasAll(['kkNumber', 'fullName', 'nik', 'gender', 'birthPlace', 'birthDate', 'religion', 'education', 'maritalStatus', 'familyPosition', 'ownerId', 'createdAt', 'updatedAt'])
-        && (data.keys().size() == 13 || (data.keys().size() == 14 && data.keys().hasAll(['photoUrl'])))
+      let requiredFields = ['kkNumber', 'fullName', 'nik', 'gender', 'birthPlace', 'birthDate', 'religion', 'education', 'maritalStatus', 'familyPosition', 'occupation', 'ownerId', 'createdAt', 'updatedAt'];
+      return data.keys().hasAll(requiredFields)
+        // Allow slightly more keys to be future-proof and handle optional photoUrl
+        && data.keys().size() >= 14 && data.keys().size() <= 16
         && data.kkNumber is string && data.kkNumber.size() == 16
         && data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 200
         && data.nik is string && data.nik.size() == 16
         && data.gender in ['Laki-laki', 'Perempuan']
         && data.birthPlace is string && data.birthPlace.size() > 0 && data.birthPlace.size() <= 100
-        && data.birthDate is string // ISO date string
+        && data.birthDate is string
         && data.religion is string
         && data.education is string
         && data.maritalStatus is string
         && data.familyPosition is string
+        && data.occupation is string
         && (!data.keys().hasAny(['photoUrl']) || (data.photoUrl is string && data.photoUrl.size() <= 2048))
-        && data.ownerId == request.auth.uid // Identity integrity
+        && data.ownerId == request.auth.uid
         && data.createdAt is timestamp
         && data.updatedAt is timestamp;
     }
@@ -41,10 +44,16 @@ service cloud.firestore {
       
       allow update: if isOwner(existing().ownerId)
         && isValidId(residentId)
-        && isValidResident(incoming())
-        && incoming().ownerId == existing().ownerId
-        && incoming().createdAt == existing().createdAt
-        && incoming().updatedAt == request.time;
+        && (
+          // Action: Full Update / Form Submit
+          (isValidResident(incoming()) && 
+           incoming().ownerId == existing().ownerId &&
+           incoming().createdAt == existing().createdAt &&
+           incoming().updatedAt == request.time) ||
+          // Action: Quick Status Update
+          (incoming().diff(existing()).affectedKeys().hasOnly(['maritalStatus', 'familyPosition', 'updatedAt']) &&
+           incoming().updatedAt == request.time)
+        );
       
       allow delete: if isOwner(existing().ownerId);
       

@@ -68,6 +68,7 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
               <DetailItem icon={User} label="Jenis Kelamin" value={resident.gender} color="text-blue-400" />
               <DetailItem icon={BookOpen} label="Agama" value={resident.religion} color="text-purple-400" />
               <DetailItem icon={Briefcase} label="Pendidikan" value={resident.education} color="text-rose-400" />
+              <DetailItem icon={Briefcase} label="Pekerjaan" value={resident.occupation} color="text-cyan-400" />
               <DetailItem icon={Heart} label="Status Perkawinan" value={resident.maritalStatus} color="text-pink-400" />
             </div>
             

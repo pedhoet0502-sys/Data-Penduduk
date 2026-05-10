@@ -47,6 +47,10 @@
           "type": "string",
           "description": "Status Hubungan dalam Keluarga"
         },
+        "occupation": {
+          "type": "string",
+          "description": "Pekerjaan"
+        },
         "photoUrl": {
           "type": "string",
           "description": "URL foto profil penduduk"
