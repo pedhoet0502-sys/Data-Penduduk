@@ -1,8 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Save, AlertCircle } from 'lucide-react';
+import { X, Save, AlertCircle, Camera, Upload, Loader2, Image as ImageIcon, Calendar } from 'lucide-react';
+import DatePicker, { registerLocale } from 'react-datepicker';
+import { id } from 'date-fns/locale';
+import { format, parseISO, isValid } from 'date-fns';
+import "react-datepicker/dist/react-datepicker.css";
 import { Gender, Resident } from '../types';
 import { RELIGIONS, EDUCATIONS, MARITAL_STATUSES, FAMILY_POSITIONS, calculateAge } from '../lib/utils';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../lib/firebase';
+
+registerLocale('id', id);
+
+const CustomDatePickerInput = React.forwardRef<HTMLInputElement, any>(({ value, onClick }, ref) => (
+  <div className="relative" onClick={onClick}>
+    <input
+      value={value}
+      readOnly
+      ref={ref}
+      className="w-full bg-slate-950/50 border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-indigo-500 transition-all cursor-pointer pr-10"
+      placeholder="Pilih Tanggal"
+    />
+    <Calendar size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500" />
+  </div>
+));
 
 interface ResidentFormProps {
   isOpen: boolean;
@@ -23,13 +44,18 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
     education: EDUCATIONS[0],
     maritalStatus: MARITAL_STATUSES[0],
     familyPosition: FAMILY_POSITIONS[0],
+    photoUrl: '',
   });
 
   const [error, setError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);
+      setPreviewUrl(initialData.photoUrl || null);
     } else {
       setFormData({
         kkNumber: '',
@@ -42,10 +68,39 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
         education: EDUCATIONS[3], // Default SMA
         maritalStatus: MARITAL_STATUSES[0],
         familyPosition: FAMILY_POSITIONS[0],
+        photoUrl: '',
       });
+      setPreviewUrl(null);
     }
     setError(null);
   }, [initialData, isOpen]);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Ukuran foto maksimal 2MB');
+      return;
+    }
+
+    setIsUploading(true);
+    setError(null);
+
+    try {
+      const storageRef = ref(storage, `residents/${Date.now()}_${file.name}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(snapshot.ref);
+      
+      setFormData(prev => ({ ...prev, photoUrl: url }));
+      setPreviewUrl(url);
+    } catch (err) {
+      console.error('Error uploading photo:', err);
+      setError('Gagal mengunggah foto. Silakan coba lagi.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,6 +188,43 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
               </div>
             )}
 
+            {/* Photo Upload Section */}
+            <div className="flex flex-col items-center justify-center p-4 bg-slate-950/30 rounded-2xl border border-white/5 space-y-4">
+              <div className="relative group">
+                <div className="w-24 h-24 rounded-full bg-slate-800 border-2 border-dashed border-slate-700 flex items-center justify-center overflow-hidden transition-all group-hover:border-indigo-500/50">
+                  {previewUrl ? (
+                    <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    <ImageIcon className="text-slate-600" size={32} />
+                  )}
+                  {isUploading && (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                      <Loader2 className="text-indigo-400 animate-spin" size={24} />
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="absolute bottom-0 right-0 p-2 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-500 transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Camera size={16} />
+                </button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handlePhotoUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Foto Profil</p>
+                <p className="text-[9px] text-slate-600 mt-1 italic">Klik ikon kamera untuk mengunggah (Format: JPG/PNG, Maks. 2MB)</p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-x-8 gap-y-6">
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">Nomor KK</label>
@@ -218,16 +310,31 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
                     id="input-birthplace"
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 relative">
                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">Tanggal Lahir</label>
-                  <input
-                    type="date"
-                    name="birthDate"
-                    value={formData.birthDate}
-                    onChange={handleInputChange}
-                    className="w-full bg-slate-950/50 border border-white/10 rounded-lg p-3 text-sm text-white outline-none"
-                    id="input-birthdate"
-                  />
+                  <div className="relative group">
+                    <DatePicker
+                      selected={formData.birthDate ? parseISO(formData.birthDate) : null}
+                      onChange={(date: Date | null) => {
+                        if (date && isValid(date)) {
+                          setFormData(prev => ({ ...prev, birthDate: format(date, 'yyyy-MM-dd') }));
+                        }
+                      }}
+                      dateFormat="dd/MM/yyyy"
+                      placeholderText="Pilih Tanggal"
+                      locale="id"
+                      showMonthDropdown
+                      showYearDropdown
+                      dropdownMode="select"
+                      maxDate={new Date()}
+                      className="w-full bg-slate-950/50 border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                      id="input-birthdate"
+                      autoComplete="off"
+                      customInput={
+                        <CustomDatePickerInput />
+                      }
+                    />
+                  </div>
                 </div>
               </div>
 

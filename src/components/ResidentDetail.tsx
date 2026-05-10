@@ -9,9 +9,10 @@ interface ResidentDetailProps {
   onClose: () => void;
   resident: Resident | null;
   onEdit: (resident: Resident) => void;
+  onDelete: (id: string) => void;
 }
 
-export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose, resident, onEdit }) => {
+export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose, resident, onEdit, onDelete }) => {
   if (!resident || !isOpen) return null;
 
   const DetailItem = ({ icon: Icon, label, value, color = "text-indigo-400" }: any) => (
@@ -39,11 +40,15 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
           {/* Header */}
           <div className="p-6 border-b border-white/10 flex items-center justify-between bg-slate-950/30">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-indigo-600/20 rounded-full flex items-center justify-center text-indigo-400">
-                <User size={28} />
+              <div className="w-16 h-16 bg-indigo-600/20 rounded-full flex items-center justify-center text-indigo-400 overflow-hidden border-2 border-indigo-500/30 shadow-lg">
+                {resident.photoUrl ? (
+                  <img src={resident.photoUrl} alt={resident.fullName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  <User size={32} />
+                )}
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">{resident.fullName}</h2>
+                <h2 className="text-xl font-bold text-white leading-tight">{resident.fullName}</h2>
                 <p className="text-xs text-indigo-400 font-mono tracking-tighter">NIK: {resident.nik}</p>
               </div>
             </div>
@@ -76,6 +81,18 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
 
           {/* Footer */}
           <div className="p-6 border-t border-white/10 bg-slate-950/30 flex justify-end gap-3">
+             <button 
+              onClick={() => {
+                onDelete(resident.id);
+                // onClose is usually called by the prop if requested, but let's assume we want to keep detail open until confirm? 
+                // Actually usually we close the detail view when starting deletion or let it stay?
+                // Let's close it to focus on the modal.
+                onClose();
+              }}
+              className="px-6 py-3 bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 font-bold rounded-xl transition-all"
+            >
+              Hapus Data
+            </button>
              <button 
               onClick={() => onEdit(resident)}
               className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-600/20"

@@ -24,8 +24,12 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
     >
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-indigo-600/20 rounded-xl flex items-center justify-center text-indigo-400">
-            <User size={24} />
+          <div className="w-12 h-12 bg-indigo-600/20 rounded-xl flex items-center justify-center text-indigo-400 overflow-hidden">
+            {resident.photoUrl ? (
+              <img src={resident.photoUrl} alt={resident.fullName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              <User size={24} />
+            )}
           </div>
           <div>
             <p className="text-[10px] text-indigo-400 font-mono mb-0.5">NIK: {resident.nik}</p>
@@ -46,9 +50,7 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
           <button
             onClick={(e) => {
               e.stopPropagation();
-              if (window.confirm('Hapus data ini?')) {
-                onDelete(resident.id);
-              }
+              onDelete(resident.id);
             }}
             className="p-2 text-slate-500 hover:text-rose-400 transition-colors"
             id={`delete-btn-${resident.id}`}

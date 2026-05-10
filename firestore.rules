@@ -16,7 +16,7 @@ service cloud.firestore {
     // Resident Validation
     function isValidResident(data) {
       return data.keys().hasAll(['kkNumber', 'fullName', 'nik', 'gender', 'birthPlace', 'birthDate', 'religion', 'education', 'maritalStatus', 'familyPosition', 'ownerId', 'createdAt', 'updatedAt'])
-        && data.keys().size() == 13
+        && (data.keys().size() == 13 || (data.keys().size() == 14 && data.keys().hasAll(['photoUrl'])))
         && data.kkNumber is string && data.kkNumber.size() == 16
         && data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 200
         && data.nik is string && data.nik.size() == 16
@@ -27,6 +27,7 @@ service cloud.firestore {
         && data.education is string
         && data.maritalStatus is string
         && data.familyPosition is string
+        && (!data.keys().hasAny(['photoUrl']) || (data.photoUrl is string && data.photoUrl.size() <= 2048))
         && data.ownerId == request.auth.uid // Identity integrity
         && data.createdAt is timestamp
         && data.updatedAt is timestamp;

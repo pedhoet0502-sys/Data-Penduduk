@@ -47,6 +47,10 @@
           "type": "string",
           "description": "Status Hubungan dalam Keluarga"
         },
+        "photoUrl": {
+          "type": "string",
+          "description": "URL foto profil penduduk"
+        },
         "ownerId": {
           "type": "string",
           "description": "UID pemilik data"
