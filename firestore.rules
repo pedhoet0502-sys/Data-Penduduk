@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 0.1 Global Helpers
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // Resident Validation
+    function isValidResident(data) {
+      return data.keys().hasAll(['kkNumber', 'fullName', 'nik', 'gender', 'birthPlace', 'birthDate', 'religion', 'education', 'maritalStatus', 'familyPosition', 'ownerId', 'createdAt', 'updatedAt'])
+        && data.keys().size() == 13
+        && data.kkNumber is string && data.kkNumber.size() == 16
+        && data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 200
+        && data.nik is string && data.nik.size() == 16
+        && data.gender in ['Laki-laki', 'Perempuan']
+        && data.birthPlace is string && data.birthPlace.size() > 0 && data.birthPlace.size() <= 100
+        && data.birthDate is string // ISO date string
+        && data.religion is string
+        && data.education is string
+        && data.maritalStatus is string
+        && data.familyPosition is string
+        && data.ownerId == request.auth.uid // Identity integrity
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    match /residents/{residentId} {
+      allow create: if isSignedIn() 
+        && isValidId(residentId)
+        && isValidResident(incoming())
+        && incoming().createdAt == request.time;
+      
+      allow update: if isOwner(existing().ownerId)
+        && isValidId(residentId)
+        && isValidResident(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      
+      allow delete: if isOwner(existing().ownerId);
+      
+      allow get: if isOwner(existing().ownerId);
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+  }
+}

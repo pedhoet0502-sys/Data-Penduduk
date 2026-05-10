@@ -1,0 +1,72 @@
+{
+  "entities": {
+    "Resident": {
+      "title": "Resident",
+      "description": "Data penduduk lengkap",
+      "type": "object",
+      "properties": {
+        "kkNumber": {
+          "type": "string",
+          "description": "Nomor KK (16 digit)"
+        },
+        "fullName": {
+          "type": "string",
+          "description": "Nama Lengkap"
+        },
+        "nik": {
+          "type": "string",
+          "description": "NIK (16 digit)"
+        },
+        "gender": {
+          "type": "string",
+          "enum": ["Laki-laki", "Perempuan"],
+          "description": "Jenis Kelamin"
+        },
+        "birthPlace": {
+          "type": "string",
+          "description": "Tempat Lahir"
+        },
+        "birthDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Tanggal Lahir"
+        },
+        "religion": {
+          "type": "string",
+          "description": "Agama"
+        },
+        "education": {
+          "type": "string",
+          "description": "Pendidikan"
+        },
+        "maritalStatus": {
+          "type": "string",
+          "description": "Status Perkawinan"
+        },
+        "familyPosition": {
+          "type": "string",
+          "description": "Status Hubungan dalam Keluarga"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "UID pemilik data"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["kkNumber", "fullName", "nik", "gender", "birthPlace", "birthDate", "ownerId"]
+    }
+  },
+  "firestore": {
+    "residents": {
+      "schema": { "$ref": "#/entities/Resident" },
+      "description": "Koleksi data penduduk"
+    }
+  }
+}
