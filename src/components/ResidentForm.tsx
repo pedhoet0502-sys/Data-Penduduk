@@ -5,7 +5,7 @@ import DatePicker, { registerLocale } from 'react-datepicker';
 import { id } from 'date-fns/locale';
 import { format, parseISO, isValid } from 'date-fns';
 import "react-datepicker/dist/react-datepicker.css";
-import { Gender, Resident, ResidenceStatus, ResidentStatus } from '../types';
+import { Gender, Resident, ResidenceStatus, ResidentStatus, MutationType } from '../types';
 import { RELIGIONS, EDUCATIONS, MARITAL_STATUSES, FAMILY_POSITIONS, OCCUPATIONS, BLOOD_TYPES, RESIDENCE_STATUSES, calculateAge } from '../lib/utils';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../lib/firebase';
@@ -28,7 +28,7 @@ const CustomDatePickerInput = React.forwardRef<HTMLInputElement, any>(({ value, 
 interface ResidentFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: Partial<Resident>) => void;
+  onSubmit: (data: Partial<Resident>, mutationType?: MutationType) => void;
   initialData?: Resident | null;
 }
 
@@ -41,7 +41,7 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
     birthPlace: '',
     birthDate: '',
     religion: RELIGIONS[0],
-    education: EDUCATIONS[0],
+    education: EDUCATIONS[3], // Default SMA
     maritalStatus: MARITAL_STATUSES[0],
     familyPosition: FAMILY_POSITIONS[0],
     occupation: OCCUPATIONS[0],
@@ -53,6 +53,8 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
     photoUrl: '',
     status: ResidentStatus.ACTIVE,
   });
+
+  const [registrationType, setRegistrationType] = useState<MutationType | 'NORMAL'>('NORMAL');
 
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -202,7 +204,7 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
     }
 
     setError(null);
-    onSubmit(formData);
+    onSubmit(formData, registrationType !== 'NORMAL' ? registrationType : undefined);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -235,6 +237,33 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
           </div>
 
           <form onSubmit={handleSubmit} className="p-8 overflow-y-auto space-y-6">
+            {!initialData && (
+              <div className="space-y-4">
+                <label className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] ml-1">Tipe Pendaftaran / Mutasi Masuk</label>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { id: 'NORMAL', label: 'Biasa', desc: 'Data Existing' },
+                    { id: MutationType.BIRTH, label: 'Kelahiran', desc: 'Warga Baru' },
+                    { id: MutationType.COMING, label: 'Pindah Datang', desc: 'Warga Baru' }
+                  ].map((type) => (
+                    <button
+                      key={type.id}
+                      type="button"
+                      onClick={() => setRegistrationType(type.id as any)}
+                      className={`p-3 rounded-2xl border text-left transition-all ${
+                        registrationType === type.id
+                          ? 'bg-indigo-600/20 border-indigo-500 ring-4 ring-indigo-500/10'
+                          : 'bg-slate-950/20 border-white/5 hover:border-white/10'
+                      }`}
+                    >
+                      <p className={`text-[11px] font-black uppercase tracking-tight ${registrationType === type.id ? 'text-white' : 'text-slate-500'}`}>{type.label}</p>
+                      <p className="text-[9px] text-slate-500 mt-0.5">{type.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {error && (
               <div className="bg-rose-500/10 text-rose-400 p-4 rounded-lg flex items-center gap-3 text-xs font-semibold border border-rose-500/20">
                 <AlertCircle size={16} />

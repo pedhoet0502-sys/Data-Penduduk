@@ -57,6 +57,8 @@ export const MutationForm: React.FC<MutationFormProps> = ({ isOpen, onClose, onS
   if (!isOpen) return null;
 
   const mutationOptions = [
+    { value: MutationType.BIRTH, label: 'Kelahiran', status: 'Aktif' },
+    { value: MutationType.COMING, label: 'Pindah Datang', status: 'Aktif' },
     { value: MutationType.DEATH, label: 'Kematian', status: 'Meninggal Dunia' },
     { value: MutationType.MOVING, label: 'Pindah Domisili', status: 'Pindah Domisili' },
   ];

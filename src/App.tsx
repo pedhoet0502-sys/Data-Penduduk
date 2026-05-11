@@ -180,7 +180,7 @@ export default function App() {
     }
   };
 
-  const handleSubmitResident = async (data: Partial<Resident>) => {
+  const handleSubmitResident = async (data: Partial<Resident>, mutationType?: MutationType) => {
     if (!user) return;
     setSyncing(true);
 
@@ -208,12 +208,25 @@ export default function App() {
           updatedAt: serverTimestamp(),
         });
       } else {
-        await addDoc(collection(db, 'residents'), {
+        const docRef = await addDoc(collection(db, 'residents'), {
           ...payload,
           ownerId: user.uid,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
+
+        // 📝 Track Mutation if specified (Birth or Coming)
+        if (mutationType) {
+          await addDoc(collection(db, 'mutations'), {
+            residentId: docRef.id,
+            residentName: payload.fullName,
+            type: mutationType,
+            date: format(new Date(), 'yyyy-MM-dd'),
+            description: mutationType === MutationType.BIRTH ? 'Lahir di wilayah ini' : 'Pindah datang baru',
+            ownerId: user.uid,
+            createdAt: serverTimestamp(),
+          });
+        }
       }
       setIsFormOpen(false);
       setEditingResident(null);
