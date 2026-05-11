@@ -209,6 +209,14 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    // 🛡️ Strict numeric validation for KK and NIK
+    if (name === 'kkNumber' || name === 'nik' || name === 'phone') {
+      const numericValue = value.replace(/\D/g, '');
+      setFormData(prev => ({ ...prev, [name]: numericValue }));
+      return;
+    }
+
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 

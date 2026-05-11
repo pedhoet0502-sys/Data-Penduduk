@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, CreditCard, MapPin, Calendar, Scroll, Heart, Users, Briefcase, RefreshCcw, CheckCircle2, GraduationCap, Droplets, Phone, Home, History } from 'lucide-react';
-import { Resident, ResidentStatus } from '../types';
+import { X, User, CreditCard, MapPin, Calendar, Scroll, Heart, Users, Briefcase, RefreshCcw, CheckCircle2, GraduationCap, Droplets, Phone, Home, History, Copy, Check } from 'lucide-react';
+import { Resident, ResidentStatus, Mutation } from '../types';
 import { calculateAge } from '../lib/utils';
 import { format } from 'date-fns';
 
@@ -11,10 +11,13 @@ interface ResidentDetailProps {
   resident: Resident | null;
   onEdit: (resident: Resident) => void;
   onAddMutation?: (resident: Resident) => void;
+  mutations?: Mutation[]; // Added mutations
 }
 
-export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose, resident, onEdit, onAddMutation }) => {
+export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose, resident, onEdit, onAddMutation, mutations = [] }) => {
   if (!resident || !isOpen) return null;
+
+  const residentMutations = mutations.filter(m => m.residentId === resident.id);
 
   const statusColors = {
     [ResidentStatus.ACTIVE]: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
@@ -23,17 +26,39 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
     [ResidentStatus.INACTIVE]: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
   };
 
-  const DetailItem = ({ icon: Icon, label, value, color = "text-indigo-400", truncate = false }: any) => (
-    <div className="flex gap-4 p-4 rounded-xl bg-slate-950/30 border border-white/5 min-w-0">
-      <div className={`w-10 h-10 ${color.replace('text', 'bg')}/10 rounded-lg flex items-center justify-center ${color} shrink-0`}>
-        <Icon size={20} />
+  const DetailItem = ({ icon: Icon, label, value, color = "text-indigo-400", truncate = false, canCopy = false }: any) => {
+    const [copied, setCopied] = React.useState(false);
+
+    const handleCopy = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+      <div className="flex gap-4 p-4 rounded-xl bg-slate-950/30 border border-white/5 min-w-0 relative group">
+        <div className={`w-10 h-10 ${color.replace('text', 'bg')}/10 rounded-lg flex items-center justify-center ${color} shrink-0`}>
+          <Icon size={20} />
+        </div>
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">{label}</p>
+          <div className="flex items-center gap-2">
+            <p className={`text-sm font-semibold text-white ${truncate ? 'truncate' : ''}`} title={value || '-'}>{value || '-'}</p>
+            {canCopy && value && (
+              <button 
+                onClick={handleCopy}
+                className="p-1 hover:bg-white/10 rounded transition-colors text-slate-500 hover:text-indigo-400"
+                title="Salin"
+              >
+                {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
-      <div className="min-w-0 overflow-hidden">
-        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">{label}</p>
-        <p className={`text-sm font-semibold text-white ${truncate ? 'truncate' : ''}`} title={value || '-'}>{value || '-'}</p>
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <AnimatePresence>
@@ -59,6 +84,15 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
                 <h2 className="text-xl font-bold text-white leading-tight">{resident.fullName}</h2>
                 <div className="flex items-center gap-2 mt-1">
                   <p className="text-xs text-indigo-400 font-mono tracking-tighter">NIK: {resident.nik}</p>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(resident.nik);
+                    }}
+                    className="p-1 hover:bg-white/10 rounded-md transition-colors text-slate-500 hover:text-white"
+                    title="Salin NIK"
+                  >
+                    <Copy size={10} />
+                  </button>
                   <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${statusColors[resident.status || ResidentStatus.ACTIVE]}`}>
                     {resident.status || ResidentStatus.ACTIVE}
                   </span>
@@ -71,9 +105,9 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
           </div>
 
           {/* Content */}
-          <div className="p-6 overflow-y-auto">
+          <div className="p-6 overflow-y-auto custom-scrollbar">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DetailItem icon={CreditCard} label="Nomor KK" value={resident.kkNumber} />
+              <DetailItem icon={CreditCard} label="Nomor KK" value={resident.kkNumber} canCopy={true} />
               <DetailItem icon={Users} label="Status Keluarga" value={resident.familyPosition} />
               {resident.familyPosition === 'Kepala Keluarga' && resident.residenceStatus && (
                 <DetailItem icon={Home} label="Status Tempat Tinggal" value={resident.residenceStatus} color="text-violet-400" />
@@ -87,9 +121,35 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
               <DetailItem icon={Heart} label="Status Perkawinan" value={resident.maritalStatus} color="text-pink-400" />
               <DetailItem icon={Droplets} label="Gol. Darah" value={resident.bloodType} color="text-rose-600" />
               <DetailItem icon={Phone} label="Nomor Telepon" value={resident.phone} color="text-emerald-500" />
+              {resident.status !== ResidentStatus.ACTIVE && resident.inactiveDate && (
+                <DetailItem icon={Calendar} label="Tanggal Menonaktifkan" value={format(new Date(resident.inactiveDate), 'dd/MM/yyyy')} color="text-rose-500" />
+              )}
               <DetailItem icon={User} label="Nama Ayah" value={resident.fatherName} color="text-slate-400" />
               <DetailItem icon={User} label="Nama Ibu" value={resident.motherName} color="text-slate-400" />
             </div>
+
+            {residentMutations.length > 0 && (
+              <div className="mt-8 space-y-4">
+                <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Riwayat Peristiwa (Mutasi)</h3>
+                <div className="space-y-3">
+                  {residentMutations.map((m) => (
+                    <div key={m.id} className="bg-slate-950/20 border border-white/5 p-4 rounded-xl flex items-start gap-3">
+                      <div className="w-8 h-8 bg-indigo-500/10 rounded-lg flex items-center justify-center text-indigo-400 shrink-0 mt-0.5">
+                        <History size={14} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-tighter">{m.type}</span>
+                          <span className="text-[9px] text-slate-500">•</span>
+                          <span className="text-[10px] text-slate-500 font-mono">{format(new Date(m.date), 'dd MMM yyyy')}</span>
+                        </div>
+                        <p className="text-xs text-slate-300 leading-relaxed">{m.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             
             <div className={`mt-8 overflow-hidden rounded-2xl border transition-all duration-500 ${resident.updatedAt ? 'bg-emerald-500/5 border-emerald-500/20 shadow-lg shadow-emerald-500/5' : 'bg-amber-500/5 border-amber-500/20 shadow-lg shadow-amber-500/5 pulse-amber'}`}>
               <div className="flex items-center justify-between p-4 bg-white/5 border-b border-white/5">

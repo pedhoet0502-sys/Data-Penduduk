@@ -191,9 +191,9 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
           <span className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Usia</span>
           <span className="text-sm font-bold text-indigo-400">{calculateAge(resident.birthDate)} Tahun</span>
         </div>
-        <div className="flex flex-col col-span-2">
-          <span className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Pekerjaan</span>
-          <span className="text-sm font-medium text-slate-300 line-clamp-1">{resident.occupation}</span>
+        <div className="flex flex-col col-span-2 bg-slate-950/20 p-2.5 rounded-lg border border-white/5 mt-1 shadow-inner">
+          <span className="text-[9px] text-indigo-400 uppercase font-black tracking-widest mb-1 opacity-70">Pekerjaan / Profesi</span>
+          <span className="text-sm font-semibold text-white leading-relaxed">{resident.occupation}</span>
         </div>
       </div>
       

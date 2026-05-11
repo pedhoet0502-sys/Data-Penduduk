@@ -39,6 +39,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [isOnline, setIsOnline] = useState(window.navigator.onLine);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(new Date());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGender, setFilterGender] = useState<string>('Semua');
   const [filterReligion, setFilterReligion] = useState<string>('Semua');
@@ -105,6 +106,9 @@ export default function App() {
         ...doc.data()
       })) as Resident[];
       setResidents(data);
+      if (!snapshot.metadata.fromCache) {
+        setLastSyncTime(new Date());
+      }
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'residents');
     });
@@ -230,7 +234,12 @@ export default function App() {
       }
       setIsFormOpen(false);
       setEditingResident(null);
-      showToast(isUpdate ? 'Data berhasil diperbarui' : 'Data berhasil ditambahkan');
+      
+      const successMessage = isUpdate 
+        ? (isOnline ? 'Data berhasil diperbarui' : 'Perubahan disimpan di perangkat (Luring)')
+        : (isOnline ? 'Data berhasil ditambahkan' : 'Data baru disimpan di perangkat (Luring)');
+        
+      showToast(successMessage);
     } catch (error) {
       showToast('Gagal menyimpan data', 'error');
       handleFirestoreError(error, isUpdate ? OperationType.UPDATE : OperationType.CREATE, isUpdate ? `residents/${residentId}` : 'residents');
@@ -248,7 +257,7 @@ export default function App() {
       }
       setResidentIdToDelete(null);
       setIsConfirmOpen(false);
-      showToast('Data berhasil dihapus');
+      showToast(isOnline ? 'Data berhasil dihapus' : 'Data dihapus dari antrian lokal (Luring)');
     } catch (error) {
       showToast('Gagal menghapus data', 'error');
       handleFirestoreError(error, OperationType.DELETE, 'residents');
@@ -277,7 +286,7 @@ export default function App() {
         });
       }
 
-      showToast('Mutasi berhasil dicatat');
+      showToast(isOnline ? 'Mutasi berhasil dicatat' : 'Mutasi disimpan di antrian lokal (Luring)');
       setIsDetailOpen(false);
     } catch (error) {
       showToast('Gagal mencatat mutasi', 'error');
@@ -454,15 +463,22 @@ export default function App() {
 
         {/* Sync Status Overlay (Mobile friendly feedback) */}
         {!syncing && residents.length > 0 && (
-          <div className={`mb-4 flex items-center gap-2 px-3 py-1 border rounded-full w-fit ${isOnline ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-slate-500/10 border-slate-500/20'}`}>
-            {isOnline ? (
-              <CheckCircle2 size={12} className="text-emerald-400" />
-            ) : (
-              <Database size={12} className="text-slate-400" />
+          <div className={`mb-4 flex items-center justify-between px-4 py-2 border rounded-2xl w-full ${isOnline ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-amber-500/5 border-amber-500/10'}`}>
+            <div className="flex items-center gap-2">
+              {isOnline ? (
+                <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
+              ) : (
+                <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+              )}
+              <span className={`text-[10px] font-black uppercase tracking-widest ${isOnline ? 'text-emerald-500/80' : 'text-amber-500/80'}`}>
+                {isOnline ? 'Cloud Terhubung' : 'Mode Luring'}
+              </span>
+            </div>
+            {lastSyncTime && (
+              <span className="text-[9px] font-medium text-slate-500">
+                Sinkronisasi: {format(lastSyncTime, 'HH:mm:ss')}
+              </span>
             )}
-            <span className={`text-[10px] font-bold uppercase tracking-tighter ${isOnline ? 'text-emerald-400' : 'text-slate-400'}`}>
-              {isOnline ? 'Terhubung dengan Cloud' : 'Data Disimpan Lokal'}
-            </span>
           </div>
         )}
         {/* Stats */}
@@ -546,16 +562,16 @@ export default function App() {
           >
             <SlidersHorizontal size={20} />
             {(filterGender !== 'Semua' || filterReligion !== 'Semua' || filterEducation !== 'Semua' || filterFamilyPosition !== 'Semua' || filterResidenceStatus !== 'Semua') && (
-              <div className="absolute top-3 right-3">
+              <div className="absolute bottom-1.5 left-1.5">
                 <motion.span 
                   animate={{ opacity: [0.2, 0.5, 0.2], scale: [1, 2, 1] }}
                   transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                  className="absolute inset-0 w-2 h-2 rounded-full bg-emerald-500 blur-[3px]"
+                  className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-rose-500 blur-[2px]"
                 />
                 <motion.span 
                   animate={{ opacity: [0.8, 1, 0.8] }}
                   transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                  className="relative block w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)] ring-1 ring-emerald-500/30"
+                  className="relative block w-1.5 h-1.5 rounded-full bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.8)] ring-1 ring-rose-500/30"
                 />
               </div>
             )}
@@ -566,101 +582,99 @@ export default function App() {
         <AnimatePresence>
           {showFilters && (
             <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
+              initial={{ height: 0, opacity: 0, y: -10 }}
+              animate={{ height: 'auto', opacity: 1, y: 0 }}
+              exit={{ height: 0, opacity: 0, y: -10 }}
               className="overflow-hidden mb-8"
             >
-              <div className="bg-slate-900/60 border border-white/10 rounded-2xl p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                    Jenis Kelamin
-                  </label>
-                  <select 
-                    value={filterGender}
-                    onChange={(e) => setFilterGender(e.target.value)}
-                    className="w-full bg-slate-950/50 border border-white/5 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500 transition-all appearance-none"
-                  >
-                    <option value="Semua">Semua Gender</option>
-                    <option value={Gender.MALE}>Laki-laki</option>
-                    <option value={Gender.FEMALE}>Perempuan</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                    Hubungan
-                  </label>
-                  <select 
-                    value={filterFamilyPosition}
-                    onChange={(e) => setFilterFamilyPosition(e.target.value)}
-                    className="w-full bg-slate-950/50 border border-white/5 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500 transition-all appearance-none"
-                  >
-                    <option value="Semua">Semua Hubungan</option>
-                    {FAMILY_POSITIONS.map(fp => <option key={fp} value={fp}>{fp}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                    Agama
-                  </label>
-                  <select 
-                    value={filterReligion}
-                    onChange={(e) => setFilterReligion(e.target.value)}
-                    className="w-full bg-slate-950/50 border border-white/5 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500 transition-all appearance-none"
-                  >
-                    <option value="Semua">Semua Agama</option>
-                    {RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                    Pendidikan
-                  </label>
-                  <select 
-                    value={filterEducation}
-                    onChange={(e) => setFilterEducation(e.target.value)}
-                    className="w-full bg-slate-950/50 border border-white/5 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500 transition-all appearance-none"
-                  >
-                    <option value="Semua">Pendidikan</option>
-                    {EDUCATIONS.map(e => <option key={e} value={e}>{e}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                    Status Tinggal
-                  </label>
-                  <select 
-                    value={filterResidenceStatus}
-                    onChange={(e) => setFilterResidenceStatus(e.target.value)}
-                    className="w-full bg-slate-950/50 border border-white/5 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500 transition-all appearance-none"
-                  >
-                    <option value="Semua">Status Tinggal</option>
-                    {RESIDENCE_STATUSES.map(rs => <option key={rs} value={rs}>{rs}</option>)}
-                  </select>
-                </div>
-                <div className="sm:col-span-2 lg:col-span-5 pt-2">
-                  <motion.button 
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+              <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl">
+                <div className="flex items-center justify-between mb-4 px-1">
+                  <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Opsi Penyaringan</h3>
+                  <button 
                     onClick={() => {
                       setFilterGender('Semua');
                       setFilterReligion('Semua');
                       setFilterEducation('Semua');
                       setFilterFamilyPosition('Semua');
                       setFilterResidenceStatus('Semua');
-                      setSearchTerm('');
                     }}
-                    className="w-full flex items-center justify-center gap-2 py-3 bg-slate-950/50 hover:bg-slate-950 border border-white/5 hover:border-indigo-500/50 rounded-xl text-xs font-bold text-slate-400 hover:text-indigo-400 transition-all uppercase tracking-widest group shadow-sm hover:shadow-indigo-500/10"
+                    className="text-[9px] font-bold text-slate-500 hover:text-rose-400 transition-colors uppercase tracking-widest flex items-center gap-1"
                   >
-                    <motion.div
-                      whileHover={{ rotate: -180 }}
-                      transition={{ duration: 0.5, ease: "easeInOut" }}
-                      className="flex items-center justify-center"
+                    Atur Ulang Semua
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                  <div className="bg-slate-950/40 p-3 rounded-xl border border-white/5">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter block mb-2 px-1">
+                      Jenis Kelamin
+                    </label>
+                    <select 
+                      value={filterGender}
+                      onChange={(e) => setFilterGender(e.target.value)}
+                      className="w-full bg-transparent border-none text-xs text-white outline-none cursor-pointer font-medium"
                     >
-                      <RefreshCcw size={14} />
-                    </motion.div>
-                    Reset Semua Filter
-                  </motion.button>
+                      <option value="Semua">Semua Gender</option>
+                      <option value={Gender.MALE}>Laki-laki</option>
+                      <option value={Gender.FEMALE}>Perempuan</option>
+                    </select>
+                  </div>
+
+                  <div className="bg-slate-950/40 p-3 rounded-xl border border-white/5">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter block mb-2 px-1">
+                      Status Keluarga
+                    </label>
+                    <select 
+                      value={filterFamilyPosition}
+                      onChange={(e) => setFilterFamilyPosition(e.target.value)}
+                      className="w-full bg-transparent border-none text-xs text-white outline-none cursor-pointer font-medium"
+                    >
+                      <option value="Semua">Semua Hubungan</option>
+                      {FAMILY_POSITIONS.map(fp => <option key={fp} value={fp}>{fp}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="bg-slate-950/40 p-3 rounded-xl border border-white/5">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter block mb-2 px-1">
+                      Kepercayaan
+                    </label>
+                    <select 
+                      value={filterReligion}
+                      onChange={(e) => setFilterReligion(e.target.value)}
+                      className="w-full bg-transparent border-none text-xs text-white outline-none cursor-pointer font-medium"
+                    >
+                      <option value="Semua">Semua Agama</option>
+                      {RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="bg-slate-950/40 p-3 rounded-xl border border-white/5">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter block mb-2 px-1">
+                      Pedidikan Terakhir
+                    </label>
+                    <select 
+                      value={filterEducation}
+                      onChange={(e) => setFilterEducation(e.target.value)}
+                      className="w-full bg-transparent border-none text-xs text-white outline-none cursor-pointer font-medium"
+                    >
+                      <option value="Semua">Semua Jenjang</option>
+                      {EDUCATIONS.map(e => <option key={e} value={e}>{e}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="bg-slate-950/40 p-3 rounded-xl border border-white/5">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter block mb-2 px-1">
+                      Status Tinggal
+                    </label>
+                    <select 
+                      value={filterResidenceStatus}
+                      onChange={(e) => setFilterResidenceStatus(e.target.value)}
+                      className="w-full bg-transparent border-none text-xs text-white outline-none cursor-pointer font-medium"
+                    >
+                      <option value="Semua">Semua Status</option>
+                      {RESIDENCE_STATUSES.map(rs => <option key={rs} value={rs}>{rs}</option>)}
+                    </select>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -789,6 +803,7 @@ export default function App() {
       <ResidentDetail
         isOpen={isDetailOpen}
         resident={viewingResident}
+        mutations={mutations}
         onClose={() => {
           setIsDetailOpen(false);
           setViewingResident(null);
