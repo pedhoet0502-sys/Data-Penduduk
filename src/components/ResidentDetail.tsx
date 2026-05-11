@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, User, CreditCard, MapPin, Calendar, Scroll, Heart, Users, Briefcase, RefreshCcw, CheckCircle2, GraduationCap, Droplets, Phone, Home, History, Copy, Check } from 'lucide-react';
 import { Resident, ResidentStatus, Mutation } from '../types';
-import { calculateAge } from '../lib/utils';
+import { calculateAge, getInitials, getColorFromName } from '../lib/utils';
 import { format } from 'date-fns';
 
 interface ResidentDetailProps {
@@ -12,9 +12,11 @@ interface ResidentDetailProps {
   onEdit: (resident: Resident) => void;
   onAddMutation?: (resident: Resident) => void;
   mutations?: Mutation[]; // Added mutations
+  isReadOnly?: boolean;
+  ownerEmail?: string;
 }
 
-export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose, resident, onEdit, onAddMutation, mutations = [] }) => {
+export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose, resident, onEdit, onAddMutation, mutations = [], isReadOnly = false, ownerEmail }) => {
   if (!resident || !isOpen) return null;
 
   const residentMutations = mutations.filter(m => m.residentId === resident.id);
@@ -73,15 +75,22 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
           {/* Header */}
           <div className="p-6 border-b border-white/10 flex items-center justify-between bg-slate-950/30">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-indigo-600/20 rounded-full flex items-center justify-center text-indigo-400 overflow-hidden border-2 border-indigo-500/30 shadow-lg">
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white overflow-hidden border-2 border-white/20 shadow-xl ${resident.photoUrl ? 'bg-slate-800' : getColorFromName(resident.fullName)}`}>
                 {resident.photoUrl ? (
                   <img src={resident.photoUrl} alt={resident.fullName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
-                  <User size={32} />
+                  <span className="text-xl font-black tracking-tight">{getInitials(resident.fullName)}</span>
                 )}
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white leading-tight">{resident.fullName}</h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-bold text-white leading-tight">{resident.fullName}</h2>
+                  {isReadOnly && (
+                    <span className="flex items-center gap-1 px-1.5 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-md text-[8px] font-black uppercase tracking-widest shadow-sm" title={`Milik: ${ownerEmail || 'Akun Lain'}`}>
+                      <Users size={8} /> {ownerEmail || 'Akses Berbagi'}
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 mt-1">
                   <p className="text-xs text-indigo-400 font-mono tracking-tighter">NIK: {resident.nik}</p>
                   <button 
@@ -185,7 +194,7 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
 
           {/* Footer */}
           <div className="p-6 border-t border-white/10 bg-slate-950/30 flex flex-wrap justify-end gap-3">
-             {(resident.status || ResidentStatus.ACTIVE) === ResidentStatus.ACTIVE && onAddMutation && (
+             {!isReadOnly && (resident.status || ResidentStatus.ACTIVE) === ResidentStatus.ACTIVE && onAddMutation && (
                 <button
                   onClick={() => onAddMutation(resident)}
                   className="px-6 py-3 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 font-bold rounded-xl transition-all flex items-center gap-2 mr-auto"
@@ -194,12 +203,14 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
                   Mutasi Data
                 </button>
              )}
-             <button 
-              onClick={() => onEdit(resident)}
-              className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-600/20"
-            >
-              Ubah Data
-            </button>
+             {!isReadOnly && (
+               <button 
+                onClick={() => onEdit(resident)}
+                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-600/20"
+              >
+                Ubah Data
+              </button>
+             )}
           </div>
         </motion.div>
       </div>

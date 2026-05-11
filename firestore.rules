@@ -7,11 +7,20 @@ service cloud.firestore {
     }
 
     // 0.1 Global Helpers
-    function isSignedIn() { return request.auth != null; }
+    function isSignedIn() { return request.auth != null && request.auth.token.email_verified == true; }
     function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
-    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-.@]+$'); }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
+    function currentUserEmail() { return request.auth.token.email.lower(); }
+
+    function isCollaborator(ownerId) {
+      return isSignedIn() && exists(/databases/$(database)/documents/shares/$(currentUserEmail() + "_" + ownerId));
+    }
+
+    function hasAccess(ownerId) {
+      return isOwner(ownerId) || isCollaborator(ownerId);
+    }
 
     // Resident Validation
     function isValidResident(data) {
@@ -57,6 +66,18 @@ service cloud.firestore {
         && data.createdAt is timestamp;
     }
 
+    // Share Validation
+    function isValidShare(data) {
+      let requiredFields = ['ownerId', 'ownerEmail', 'collaboratorEmail', 'createdAt'];
+      return data.keys().hasAll(requiredFields)
+        && data.keys().size() == 4
+        && data.ownerId == request.auth.uid
+        && data.ownerEmail is string
+        && data.collaboratorEmail is string
+        && data.collaboratorEmail == data.collaboratorEmail.lower()
+        && data.createdAt is timestamp;
+    }
+
     match /residents/{residentId} {
       allow create: if isSignedIn() 
         && isValidId(residentId)
@@ -78,8 +99,8 @@ service cloud.firestore {
       
       allow delete: if isOwner(existing().ownerId);
       
-      allow get: if isOwner(existing().ownerId);
-      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow get: if hasAccess(existing().ownerId);
+      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isCollaborator(resource.data.ownerId));
     }
 
     match /mutations/{mutationId} {
@@ -88,8 +109,22 @@ service cloud.firestore {
         && isValidMutation(incoming())
         && incoming().createdAt == request.time;
       
-      allow get, delete: if isOwner(existing().ownerId);
-      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow get: if hasAccess(existing().ownerId);
+      allow delete: if isOwner(existing().ownerId);
+      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isCollaborator(resource.data.ownerId));
+    }
+
+    match /shares/{shareId} {
+      // shareId should be collaboratorEmail + "_" + ownerId
+      allow create: if isSignedIn() 
+        && isValidShare(incoming())
+        && incoming().createdAt == request.time;
+      
+      allow update: if isSignedIn()
+        && isOwner(existing().ownerId)
+        && isValidShare(incoming());
+
+      allow read, delete: if isSignedIn() && (resource.data.ownerId == request.auth.uid || resource.data.collaboratorEmail == currentUserEmail());
     }
   }
 }

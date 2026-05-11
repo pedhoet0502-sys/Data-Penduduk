@@ -28,6 +28,29 @@ export const FAMILY_POSITIONS = ['Kepala Keluarga', 'Istri', 'Anak', 'Mertua', '
 export const BLOOD_TYPES = ['-', 'A', 'B', 'AB', 'O'];
 export const RESIDENCE_STATUSES = ['Milik Sendiri', 'Sewa/Kontrak', 'Menumpang', 'Rumah Dinas', 'Lainnya'];
 
+export function getInitials(name: string): string {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return parts[0][0].toUpperCase();
+}
+
+export function getColorFromName(name: string): string {
+  if (!name) return 'bg-slate-700';
+  const colors = [
+    'bg-indigo-500', 'bg-emerald-500', 'bg-rose-500', 'bg-amber-500', 
+    'bg-sky-500', 'bg-violet-500', 'bg-fuchsia-500', 'bg-orange-500'
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash % colors.length);
+  return colors[index];
+}
+
 export const OCCUPATIONS = [
   'Belum/Tidak Bekerja',
   'Mengurus Rumah Tangga',

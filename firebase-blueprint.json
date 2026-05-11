@@ -114,6 +114,18 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["residentId", "residentName", "type", "date", "ownerId", "createdAt"]
+    },
+    "Share": {
+      "title": "Share",
+      "description": "Izin berbagi akses data antarpengguna",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "description": "UID pemilik data yang dibagikan" },
+        "ownerEmail": { "type": "string", "description": "Email pemilik data" },
+        "collaboratorEmail": { "type": "string", "description": "Email penerima akses" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "ownerEmail", "collaboratorEmail", "createdAt"]
     }
   },
   "firestore": {
@@ -124,6 +136,10 @@
     "mutations": {
       "schema": { "$ref": "#/entities/Mutation" },
       "description": "Koleksi data mutasi penduduk"
+    },
+    "shares": {
+      "schema": { "$ref": "#/entities/Share" },
+      "description": "Koleksi data berbagi akses"
     }
   }
 }

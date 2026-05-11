@@ -198,7 +198,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
             animate="visible"
           >
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-2 gap-4 mb-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
               {/* Row 1: Total & Avg Age */}
               <motion.div variants={itemVariants} className="group bg-slate-800/40 p-5 rounded-3xl border border-white/5 flex items-center gap-5 hover:bg-slate-800/60 transition-all duration-300">
                 <div className="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-500/10 group-hover:scale-110 transition-transform duration-300">

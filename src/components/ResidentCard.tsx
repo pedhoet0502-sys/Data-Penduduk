@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { User, CreditCard, Calendar, MapPin, Trash2, Edit2, ChevronRight, Zap, Check, X, RefreshCcw, CheckCircle2, History } from 'lucide-react';
+import { Users, CreditCard, Calendar, MapPin, Trash2, Edit2, ChevronRight, Zap, Check, X, RefreshCcw, CheckCircle2, History } from 'lucide-react';
 import { Resident, ResidentStatus } from '../types';
-import { calculateAge, MARITAL_STATUSES, FAMILY_POSITIONS } from '../lib/utils';
+import { calculateAge, MARITAL_STATUSES, FAMILY_POSITIONS, getInitials, getColorFromName } from '../lib/utils';
 import { format } from 'date-fns';
 
 interface ResidentCardProps {
@@ -12,9 +12,11 @@ interface ResidentCardProps {
   onViewDetail: (resident: Resident) => void;
   onUpdate: (data: Partial<Resident>) => Promise<void>;
   onAddMutation?: (resident: Resident) => void;
+  isReadOnly?: boolean;
+  ownerEmail?: string;
 }
 
-export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, onDelete, onViewDetail, onUpdate, onAddMutation }) => {
+export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, onDelete, onViewDetail, onUpdate, onAddMutation, isReadOnly = false, ownerEmail }) => {
   const [isInlineEditing, setIsInlineEditing] = useState(false);
   const [inlineFamilyPosition, setInlineFamilyPosition] = useState(resident.familyPosition);
   const [inlineMaritalStatus, setInlineMaritalStatus] = useState(resident.maritalStatus);
@@ -59,7 +61,7 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ scale: 1.01, translateY: -2, transition: { duration: 0.2 } }}
       whileTap={{ scale: 0.99, translateY: 0 }}
-      className={`bg-slate-800/40 rounded-xl p-5 shadow-sm border transition-all cursor-pointer relative ${isInlineEditing ? 'border-indigo-500/50 ring-1 ring-indigo-500/20 shadow-indigo-500/5' : 'border-white/5 hover:border-white/20 hover:shadow-xl hover:shadow-indigo-500/5'}`}
+      className={`bg-slate-800/30 rounded-2xl p-4 sm:p-5 shadow-sm border transition-all cursor-pointer relative ${isInlineEditing ? 'border-indigo-500/50 ring-1 ring-indigo-500/20 shadow-indigo-500/5' : 'border-white/5 hover:border-white/20 hover:shadow-xl hover:shadow-indigo-500/5'}`}
       id={`resident-card-${resident.id}`}
       onClick={() => !isInlineEditing && onViewDetail(resident)}
     >
@@ -93,18 +95,18 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
         </motion.div>
       )}
 
-      <div className="flex justify-between items-start mb-4">
+      <div className="flex justify-between items-start mb-3">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-indigo-600/20 rounded-xl flex items-center justify-center text-indigo-400 overflow-hidden">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white overflow-hidden shadow-lg border border-white/10 ${resident.photoUrl ? 'bg-slate-800' : getColorFromName(resident.fullName)}`}>
             {resident.photoUrl ? (
               <img src={resident.photoUrl} alt={resident.fullName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             ) : (
-              <User size={24} />
+              <span className="text-base font-black tracking-tight">{getInitials(resident.fullName)}</span>
             )}
           </div>
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
-              <p className="text-[10px] text-indigo-400 font-mono">NIK: {resident.nik}</p>
+              <p className="text-[9px] text-indigo-400 font-mono tracking-tight">NIK {resident.nik}</p>
               {resident.updatedAt ? (
                 <div className="flex items-center gap-1" title="Tersinkronisasi">
                   <CheckCircle2 size={10} className="text-emerald-500" />
@@ -117,18 +119,27 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
                 </div>
               )}
             </div>
-            <h3 className="font-bold text-slate-100 text-base leading-tight">{resident.fullName}</h3>
+            <h3 className="font-bold text-slate-100 text-base leading-tight flex items-center gap-2">
+              {resident.fullName}
+              {isReadOnly && (
+                <span className="flex items-center gap-1 px-1.5 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-md text-[7px] font-black uppercase tracking-widest shadow-sm truncate max-w-[80px]" title={`Milik: ${ownerEmail || 'Akun Lain'}`}>
+                  <Users size={7} /> {ownerEmail ? ownerEmail.split('@')[0] : 'Berbagi'}
+                </span>
+              )}
+            </h3>
           </div>
         </div>
-        <div className="flex gap-1">
-          <button
-            onClick={toggleInlineEdit}
-            className={`p-2 rounded-lg transition-all ${isInlineEditing ? 'text-indigo-400 bg-indigo-400/10' : 'text-slate-500 hover:text-indigo-400'}`}
-            title="Edit Cepat"
-          >
-            <Zap size={16} />
-          </button>
-          {(resident.status || ResidentStatus.ACTIVE) === ResidentStatus.ACTIVE && onAddMutation && (
+        <div className="flex gap-0.5 sm:gap-1 shrink-0">
+          {!isReadOnly && (
+            <button
+              onClick={toggleInlineEdit}
+              className={`p-2 rounded-lg transition-all ${isInlineEditing ? 'text-indigo-400 bg-indigo-400/10' : 'text-slate-500 hover:text-indigo-400'}`}
+              title="Edit Cepat"
+            >
+              <Zap size={16} />
+            </button>
+          )}
+          {!isReadOnly && (resident.status || ResidentStatus.ACTIVE) === ResidentStatus.ACTIVE && onAddMutation && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -140,60 +151,64 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
               <History size={16} />
             </button>
           )}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(resident);
-            }}
-            className="p-2 text-slate-500 hover:text-indigo-400 transition-colors"
-            id={`edit-btn-${resident.id}`}
-          >
-            <Edit2 size={16} />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(resident.id);
-            }}
-            className="p-2 text-slate-500 hover:text-rose-400 transition-colors"
-            id={`delete-btn-${resident.id}`}
-          >
-            <Trash2 size={16} />
-          </button>
+          {!isReadOnly && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(resident);
+              }}
+              className="p-2 text-slate-500 hover:text-indigo-400 transition-colors"
+              id={`edit-btn-${resident.id}`}
+            >
+              <Edit2 size={16} />
+            </button>
+          )}
+          {!isReadOnly && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(resident.id);
+              }}
+              className="p-2 text-slate-500 hover:text-rose-400 transition-colors"
+              id={`delete-btn-${resident.id}`}
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-y-4 gap-x-6">
+      <div className="grid grid-cols-2 gap-y-3 gap-x-4">
         <div className="flex flex-col">
-          <span className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">No. KK</span>
-          <span className="text-sm font-medium text-slate-300">{resident.kkNumber}</span>
+          <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest opacity-60">No. KK</span>
+          <span className="text-xs font-bold text-slate-300 truncate">{resident.kkNumber}</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Hubungan</span>
+          <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest opacity-60">Hubungan</span>
           {isInlineEditing ? (
             <select
               value={inlineFamilyPosition}
               onChange={(e) => setInlineFamilyPosition(e.target.value)}
               onClick={(e) => e.stopPropagation()}
-              className="mt-1 bg-slate-900 border border-white/10 rounded-md text-xs p-1 text-white outline-none focus:border-indigo-500"
+              className="mt-0.5 bg-slate-900 border border-white/10 rounded-lg text-[10px] p-1 text-white outline-none focus:border-indigo-500"
             >
               {FAMILY_POSITIONS.map(pos => <option key={pos} value={pos}>{pos}</option>)}
             </select>
           ) : (
-            <span className="text-sm font-medium text-slate-300">{resident.familyPosition}</span>
+            <span className="text-xs font-bold text-slate-300">{resident.familyPosition}</span>
           )}
         </div>
         <div className="flex flex-col">
-          <span className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Tempat, Tgl Lahir</span>
-          <span className="text-sm font-medium text-slate-300 line-clamp-1">{resident.birthPlace}, {format(new Date(resident.birthDate), 'dd/MM/yyyy')}</span>
+          <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest opacity-60">Tgl Lahir</span>
+          <span className="text-xs font-bold text-slate-300 line-clamp-1">{format(new Date(resident.birthDate), 'dd/MM/yyyy')}</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Usia</span>
-          <span className="text-sm font-bold text-indigo-400">{calculateAge(resident.birthDate)} Tahun</span>
+          <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest opacity-60">Usia</span>
+          <span className="text-xs font-black text-indigo-400">{calculateAge(resident.birthDate)} Thn</span>
         </div>
-        <div className="flex flex-col col-span-2 bg-slate-950/20 p-2.5 rounded-lg border border-white/5 mt-1 shadow-inner">
-          <span className="text-[9px] text-indigo-400 uppercase font-black tracking-widest mb-1 opacity-70">Pekerjaan / Profesi</span>
-          <span className="text-sm font-semibold text-white leading-relaxed">{resident.occupation}</span>
+        <div className="flex flex-col col-span-2 bg-slate-950/40 p-2 rounded-xl border border-white/5 mt-0.5 shadow-inner">
+          <span className="text-[8px] text-indigo-400/60 uppercase font-black tracking-[0.15em] mb-0.5">Pekerjaan</span>
+          <span className="text-xs font-bold text-white leading-tight truncate">{resident.occupation}</span>
         </div>
       </div>
       

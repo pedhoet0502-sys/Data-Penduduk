@@ -25,6 +25,7 @@ import { ResidentDetail } from './components/ResidentDetail';
 import { MutationForm } from './components/MutationForm';
 import { StatsDashboard } from './components/StatsDashboard';
 import { ConfirmationModal } from './components/ConfirmationModal';
+import { CollaborationModal } from './components/CollaborationModal';
 import { Toast, ToastType } from './components/Toast';
 import { handleFirestoreError, OperationType } from './lib/error-handler';
 import { History } from 'lucide-react';
@@ -51,7 +52,10 @@ export default function App() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
+  const [isCollaborationOpen, setIsCollaborationOpen] = useState(false);
   const [isMutationFormOpen, setIsMutationFormOpen] = useState(false);
+  const [sharesFromOthers, setSharesFromOthers] = useState<any[]>([]);
+  const [selectedOwnerId, setSelectedOwnerId] = useState<string>('semua');
   const [editingResident, setEditingResident] = useState<Resident | null>(null);
   const [viewingResident, setViewingResident] = useState<Resident | null>(null);
   const [mutationResident, setMutationResident] = useState<Resident | null>(null);
@@ -88,33 +92,91 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!user) {
-      setResidents([]);
+    if (!user || !user.email) {
+      setSharesFromOthers([]);
       return;
     }
 
     const q = query(
-      collection(db, 'residents'),
-      where('ownerId', '==', user.uid),
-      orderBy('kkNumber', 'asc'),
-      orderBy('fullName', 'asc')
+      collection(db, 'shares'),
+      where('collaboratorEmail', '==', user.email.toLowerCase().trim())
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
+      }));
+      setSharesFromOthers(data);
+    }, (error) => {
+      console.error('Error fetching shares:', error);
+      handleFirestoreError(error, OperationType.LIST, 'shares');
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const sharedOwnerIds = useMemo(() => sharesFromOthers.map(s => s.ownerId), [sharesFromOthers]);
+  
+  const ownerEmailMap = useMemo(() => {
+    if (!user) return {};
+    const map: Record<string, string> = { [user.uid]: user.email || '' };
+    sharesFromOthers.forEach(s => {
+      map[s.ownerId] = s.ownerEmail;
+    });
+    return map;
+  }, [user, sharesFromOthers]);
+
+  useEffect(() => {
+    if (!user) {
+      setResidents([]);
+      return;
+    }
+
+    const ownerIds = selectedOwnerId === 'semua' ? [user.uid, ...sharedOwnerIds] : [selectedOwnerId];
+    
+    // Safety check: if selectedOwnerId is not in allowed list, reset to semua
+    if (selectedOwnerId !== 'semua' && selectedOwnerId !== user.uid && !sharedOwnerIds.includes(selectedOwnerId)) {
+      setSelectedOwnerId('semua');
+      return;
+    }
+
+    let q;
+    if (ownerIds.length === 1) {
+      q = query(
+        collection(db, 'residents'),
+        where('ownerId', '==', ownerIds[0]),
+        orderBy('kkNumber', 'asc')
+      );
+    } else {
+      q = query(
+        collection(db, 'residents'),
+        where('ownerId', 'in', ownerIds),
+        orderBy('ownerId', 'asc'),
+        orderBy('kkNumber', 'asc')
+      );
+    }
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
       })) as Resident[];
+      // Client-side sort to match UI expectations if needed, but in-query is better
       setResidents(data);
       if (!snapshot.metadata.fromCache) {
         setLastSyncTime(new Date());
       }
     }, (error) => {
+      // If index is missing, we'll see it here. Fallback to simple query if needed.
+      if (error.message.includes('The query requires an index')) {
+         console.warn('Sharing across users requires a composite index. Falling back to personal view.');
+      }
       handleFirestoreError(error, OperationType.LIST, 'residents');
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, sharedOwnerIds]);
 
   useEffect(() => {
     if (!user) {
@@ -122,9 +184,11 @@ export default function App() {
       return;
     }
 
+    const ownerIds = [user.uid, ...sharedOwnerIds];
+
     const q = query(
       collection(db, 'mutations'),
-      where('ownerId', '==', user.uid),
+      where('ownerId', 'in', ownerIds),
       orderBy('createdAt', 'desc')
     );
 
@@ -139,7 +203,7 @@ export default function App() {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, sharedOwnerIds]);
 
   const handleSignIn = async () => {
     try {
@@ -393,15 +457,31 @@ export default function App() {
           </div>
           <h1 className="font-bold text-lg text-white tracking-tight uppercase">RT 05 RW 02 <span className="font-normal text-slate-400 text-sm hidden sm:inline">| Data Warga</span></h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
+          <button
+            onClick={() => setIsCollaborationOpen(true)}
+            className="flex items-center gap-2 px-2 sm:px-3 py-2 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-xl transition-all relative group"
+            title="Kelola Kolaborasi"
+          >
+            <div className="relative">
+              <Users size={18} />
+              {sharedOwnerIds.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-indigo-500 text-white text-[8px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center border-2 border-slate-900 shadow-lg">
+                  {sharedOwnerIds.length}
+                </span>
+              )}
+            </div>
+            <span className="text-xs font-bold hidden md:inline">Berbagi Akses</span>
+          </button>
           <button
             onClick={() => setIsStatsOpen(true)}
-            className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-all relative"
+            className="flex items-center gap-2 px-2 sm:px-3 py-2 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-xl transition-all relative group"
             title="Lihat Statistik"
           >
             <BarChart3 size={18} />
+            <span className="text-xs font-bold hidden md:inline">Statistik</span>
             {hasNewData && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-pink-500 rounded-full border border-slate-900 animate-pulse shadow-[0_0_8px_rgba(236,72,153,0.5)]" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-emerald-500 rounded-full border border-slate-900 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
             )}
           </button>
           <button
@@ -440,7 +520,7 @@ export default function App() {
         </div>
       </div>
 
-      <main className="px-6 py-6 max-w-2xl mx-auto">
+      <main className="px-4 sm:px-6 py-6 max-w-5xl mx-auto w-full">
         {/* Offline Banner */}
         <AnimatePresence>
           {!isOnline && (
@@ -482,12 +562,12 @@ export default function App() {
           </div>
         )}
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 mb-8 cursor-pointer group" onClick={() => setIsStatsOpen(true)}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8 cursor-pointer group" onClick={() => setIsStatsOpen(true)}>
           {/* Row 1: Total & New */}
           <div className="bg-slate-900/40 p-4 rounded-3xl border border-white/10 shadow-sm group-hover:border-indigo-500/50 transition-all flex flex-col justify-between">
-            <span className="text-[9px] uppercase font-bold text-slate-500 tracking-widest block leading-none mb-2">Total Warga</span>
+            <span className="text-[9px] uppercase font-black text-slate-500 tracking-[0.2em] block leading-none mb-2">Total Warga</span>
             <div className="flex items-center justify-between">
-              <span className="text-2xl font-black text-white leading-none">{residents.length}</span>
+              <span className="text-2xl font-black text-white leading-none tracking-tighter">{residents.length}</span>
               <div className="w-8 h-8 bg-slate-950/30 rounded-lg flex items-center justify-center">
                 <Users size={14} className="text-slate-600 group-hover:text-indigo-400" />
               </div>
@@ -495,9 +575,9 @@ export default function App() {
           </div>
           
           <div className="bg-indigo-600 p-4 rounded-3xl shadow-lg shadow-indigo-600/20 text-white group-hover:bg-indigo-500 transition-all flex flex-col justify-between">
-            <span className="text-[9px] uppercase font-bold text-indigo-200 tracking-widest block leading-none mb-2">Data Baru</span>
+            <span className="text-[9px] uppercase font-black text-indigo-200 tracking-[0.2em] block leading-none mb-2">Data Baru</span>
             <div className="flex items-center justify-between">
-              <span className="text-2xl font-black leading-none">{residents.filter(r => {
+              <span className="text-2xl font-black leading-none tracking-tighter">{residents.filter(r => {
                 const created = r.createdAt?.toDate ? r.createdAt.toDate() : (r.createdAt ? new Date(r.createdAt) : null);
                 if (!created) return false;
                 return (new Date().getTime() - created.getTime()) < 24 * 60 * 60 * 1000;
@@ -508,32 +588,34 @@ export default function App() {
             </div>
           </div>
 
-          {/* Row 2: Male & Female */}
-          <div className="bg-slate-900/60 p-4 rounded-3xl border border-white/10 shadow-sm group-hover:border-indigo-500/50 transition-all flex flex-col justify-center">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center border border-indigo-500/10">
-                <Mars size={18} className="text-indigo-400" strokeWidth={3} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase text-indigo-400/60 tracking-widest leading-none mb-1">Laki-laki</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-white leading-none tracking-tighter">{residents.filter(r => r.gender === Gender.MALE).length}</span>
-                  <span className="text-[10px] font-bold text-slate-500">{Math.round((residents.filter(r => r.gender === Gender.MALE).length / (residents.length || 1)) * 100)}%</span>
+          <div className="grid grid-cols-2 gap-3 col-span-1 sm:col-span-2">
+            {/* Row 2: Male & Female */}
+            <div className="bg-slate-900/60 p-4 rounded-3xl border border-white/10 shadow-sm group-hover:border-indigo-500/50 transition-all flex flex-col justify-center min-w-0">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center border border-indigo-500/10 shrink-0">
+                  <Mars size={16} className="text-indigo-400" strokeWidth={3} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[8px] sm:text-[10px] font-black uppercase text-indigo-400/60 tracking-widest leading-none mb-1 truncate">Laki-laki</p>
+                  <div className="flex items-baseline gap-1 sm:gap-2">
+                    <span className="text-xl sm:text-2xl font-black text-white leading-none tracking-tighter">{residents.filter(r => r.gender === Gender.MALE).length}</span>
+                    <span className="text-[8px] sm:text-[10px] font-bold text-slate-500">{Math.round((residents.filter(r => r.gender === Gender.MALE).length / (residents.length || 1)) * 100)}%</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="bg-slate-900/60 p-4 rounded-3xl border border-white/10 shadow-sm group-hover:border-pink-500/50 transition-all flex flex-col justify-center">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-pink-500/10 rounded-xl flex items-center justify-center border border-pink-500/10">
-                <Venus size={18} className="text-pink-400" strokeWidth={3} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase text-pink-400/60 tracking-widest leading-none mb-1">Perempuan</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-white leading-none tracking-tighter">{residents.filter(r => r.gender === Gender.FEMALE).length}</span>
-                  <span className="text-[10px] font-bold text-slate-500">{Math.round((residents.filter(r => r.gender === Gender.FEMALE).length / (residents.length || 1)) * 100)}%</span>
+            <div className="bg-slate-900/60 p-4 rounded-3xl border border-white/10 shadow-sm group-hover:border-pink-500/50 transition-all flex flex-col justify-center min-w-0">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-pink-500/10 rounded-xl flex items-center justify-center border border-pink-500/10 shrink-0">
+                  <Venus size={16} className="text-pink-400" strokeWidth={3} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[8px] sm:text-[10px] font-black uppercase text-pink-400/60 tracking-widest leading-none mb-1 truncate">Perempuan</p>
+                  <div className="flex items-baseline gap-1 sm:gap-2">
+                    <span className="text-xl sm:text-2xl font-black text-white leading-none tracking-tighter">{residents.filter(r => r.gender === Gender.FEMALE).length}</span>
+                    <span className="text-[8px] sm:text-[10px] font-bold text-slate-500">{Math.round((residents.filter(r => r.gender === Gender.FEMALE).length / (residents.length || 1)) * 100)}%</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -605,6 +687,25 @@ export default function App() {
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                      <div className="bg-slate-950/40 p-3 rounded-xl border border-white/5">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter block mb-2 px-1">
+                      Sumber Data
+                    </label>
+                    <select 
+                      value={selectedOwnerId}
+                      onChange={(e) => setSelectedOwnerId(e.target.value)}
+                      className="w-full bg-transparent border-none text-xs text-white outline-none cursor-pointer font-medium"
+                    >
+                      <option value="semua">Semua Akun</option>
+                      <option value={user.uid}>Data Saya</option>
+                      {sharesFromOthers.map(share => (
+                        <option key={share.ownerId} value={share.ownerId}>
+                          {share.ownerEmail}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   <div className="bg-slate-950/40 p-3 rounded-xl border border-white/5">
                     <label className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter block mb-2 px-1">
                       Jenis Kelamin
@@ -685,30 +786,41 @@ export default function App() {
         <div className="space-y-4">
           {activeTab === 'residents' ? (
             <>
-              <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500 px-2">Daftar Penduduk ({filteredResidents.length})</h2>
+              <div className="flex items-center justify-between mb-2 px-2">
+                <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Daftar Penduduk ({filteredResidents.length})</h2>
+                {filteredResidents.length > 0 && (
+                  <span className="text-[10px] font-bold text-slate-600 bg-slate-900 px-2 py-0.5 rounded-full border border-white/5">
+                    Aktif & Valid
+                  </span>
+                )}
+              </div>
               {filteredResidents.length > 0 ? (
-                <AnimatePresence>
-                  {filteredResidents.map(resident => (
-                    <ResidentCard
-                      key={resident.id}
-                      resident={resident}
-                      onEdit={(r) => {
-                        setEditingResident(r);
-                        setIsFormOpen(true);
-                      }}
-                      onDelete={confirmDelete}
-                      onViewDetail={(r) => {
-                        setViewingResident(r);
-                        setIsDetailOpen(true);
-                      }}
-                      onUpdate={handleSubmitResident}
-                      onAddMutation={(r) => {
-                        setMutationResident(r);
-                        setIsMutationFormOpen(true);
-                      }}
-                    />
-                  ))}
-                </AnimatePresence>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <AnimatePresence mode="popLayout">
+                    {filteredResidents.map(resident => (
+                      <ResidentCard
+                        key={resident.id}
+                        resident={resident}
+                        isReadOnly={resident.ownerId !== user?.uid}
+                        ownerEmail={ownerEmailMap[resident.ownerId]}
+                        onEdit={(r) => {
+                          setEditingResident(r);
+                          setIsFormOpen(true);
+                        }}
+                        onDelete={confirmDelete}
+                        onViewDetail={(r) => {
+                          setViewingResident(r);
+                          setIsDetailOpen(true);
+                        }}
+                        onUpdate={handleSubmitResident}
+                        onAddMutation={(r) => {
+                          setMutationResident(r);
+                          setIsMutationFormOpen(true);
+                        }}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </div>
               ) : (
                 <div className="text-center py-20 bg-slate-900/20 rounded-3xl border border-dashed border-white/5">
                   <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-slate-700 mx-auto mb-4">
@@ -774,19 +886,23 @@ export default function App() {
         </div>
       </main>
 
-      {/* FAB */}
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => {
-          setEditingResident(null);
-          setIsFormOpen(true);
-        }}
-        className="fixed bottom-8 right-8 w-16 h-16 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-indigo-600/40 z-40"
-        id="add-resident-fab"
-      >
-        <Plus size={32} />
-      </motion.button>
+      {/* FAB - Hidden if viewing shared account only */}
+      {user && (selectedOwnerId === 'semua' || selectedOwnerId === user.uid) && (
+        <motion.button
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => {
+            setEditingResident(null);
+            setIsFormOpen(true);
+          }}
+          className="fixed bottom-8 right-8 w-16 h-16 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-indigo-600/40 z-40"
+          id="add-resident-fab"
+        >
+          <Plus size={32} />
+        </motion.button>
+      )}
 
       {/* Form Dialog */}
       <ResidentForm
@@ -799,11 +915,22 @@ export default function App() {
         initialData={editingResident}
       />
 
+      {/* Collaboration Modal */}
+      {user && (
+        <CollaborationModal
+          isOpen={isCollaborationOpen}
+          onClose={() => setIsCollaborationOpen(false)}
+          user={user}
+        />
+      )}
+
       {/* Detail Dialog */}
       <ResidentDetail
         isOpen={isDetailOpen}
         resident={viewingResident}
         mutations={mutations}
+        isReadOnly={viewingResident?.ownerId !== user?.uid}
+        ownerEmail={viewingResident ? ownerEmailMap[viewingResident.ownerId] : undefined}
         onClose={() => {
           setIsDetailOpen(false);
           setViewingResident(null);
