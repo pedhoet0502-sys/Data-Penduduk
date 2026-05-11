@@ -59,6 +59,19 @@
           "type": "string",
           "description": "Nomor Telepon"
         },
+        "fatherName": {
+          "type": "string",
+          "description": "Nama Ayah Kandung"
+        },
+        "motherName": {
+          "type": "string",
+          "description": "Nama Ibu Kandung"
+        },
+        "residenceStatus": {
+          "type": "string",
+          "enum": ["Milik Sendiri", "Sewa/Kontrak", "Menumpang", "Rumah Dinas", "Lainnya"],
+          "description": "Status Tempat Tinggal"
+        },
         "photoUrl": {
           "type": "string",
           "description": "URL foto profil penduduk"

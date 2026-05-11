@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, CreditCard, MapPin, Calendar, Scroll, Heart, Users, Briefcase, RefreshCcw, CheckCircle2, GraduationCap, Droplets, Phone } from 'lucide-react';
+import { X, User, CreditCard, MapPin, Calendar, Scroll, Heart, Users, Briefcase, RefreshCcw, CheckCircle2, GraduationCap, Droplets, Phone, Home } from 'lucide-react';
 import { Resident } from '../types';
 import { calculateAge } from '../lib/utils';
 import { format } from 'date-fns';
@@ -63,6 +63,9 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <DetailItem icon={CreditCard} label="Nomor KK" value={resident.kkNumber} />
               <DetailItem icon={Users} label="Status Keluarga" value={resident.familyPosition} />
+              {resident.familyPosition === 'Kepala Keluarga' && resident.residenceStatus && (
+                <DetailItem icon={Home} label="Status Tempat Tinggal" value={resident.residenceStatus} color="text-violet-400" />
+              )}
               <DetailItem icon={MapPin} label="Tempat Lahir" value={resident.birthPlace} color="text-amber-400" />
               <DetailItem icon={Calendar} label="Tanggal Lahir" value={`${format(new Date(resident.birthDate), 'dd/MM/yyyy')} (${calculateAge(resident.birthDate)} Thn)`} color="text-emerald-400" />
               <DetailItem icon={User} label="Jenis Kelamin" value={resident.gender} color="text-blue-400" />
@@ -72,6 +75,8 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
               <DetailItem icon={Heart} label="Status Perkawinan" value={resident.maritalStatus} color="text-pink-400" />
               <DetailItem icon={Droplets} label="Gol. Darah" value={resident.bloodType} color="text-rose-600" />
               <DetailItem icon={Phone} label="Nomor Telepon" value={resident.phone} color="text-emerald-500" />
+              <DetailItem icon={User} label="Nama Ayah" value={resident.fatherName} color="text-slate-400" />
+              <DetailItem icon={User} label="Nama Ibu" value={resident.motherName} color="text-slate-400" />
             </div>
             
             <div className={`mt-8 overflow-hidden rounded-2xl border transition-all duration-500 ${resident.updatedAt ? 'bg-emerald-500/5 border-emerald-500/20 shadow-lg shadow-emerald-500/5' : 'bg-amber-500/5 border-amber-500/20 shadow-lg shadow-amber-500/5 pulse-amber'}`}>

@@ -15,13 +15,17 @@ service cloud.firestore {
 
     // Resident Validation
     function isValidResident(data) {
-      let requiredFields = ['kkNumber', 'fullName', 'nik', 'gender', 'birthPlace', 'birthDate', 'religion', 'education', 'maritalStatus', 'familyPosition', 'occupation', 'bloodType', 'phone', 'ownerId', 'createdAt', 'updatedAt'];
+      let requiredFields = ['kkNumber', 'fullName', 'nik', 'gender', 'birthPlace', 'birthDate', 'religion', 'education', 'maritalStatus', 'familyPosition', 'occupation', 'bloodType', 'phone', 'ownerId', 'createdAt', 'updatedAt', 'fatherName', 'motherName'];
       return data.keys().hasAll(requiredFields)
+        // Check if residenceStatus is required
+        && (data.familyPosition != 'Kepala Keluarga' || (data.keys().hasAll(['residenceStatus']) && data.residenceStatus in ['Milik Sendiri', 'Sewa/Kontrak', 'Menumpang', 'Rumah Dinas', 'Lainnya']))
         // Allow slightly more keys to be future-proof and handle optional photoUrl
-        && data.keys().size() >= 16 && data.keys().size() <= 18
+        && data.keys().size() >= 18 && data.keys().size() <= 21
         && data.kkNumber is string && data.kkNumber.size() == 16
         && data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 200
         && data.nik is string && data.nik.size() == 16
+        && data.fatherName is string && data.fatherName.size() >= 2 && data.fatherName.size() <= 200
+        && data.motherName is string && data.motherName.size() >= 2 && data.motherName.size() <= 200
         && data.gender in ['Laki-laki', 'Perempuan']
         && data.birthPlace is string && data.birthPlace.size() > 0 && data.birthPlace.size() <= 100
         && data.birthDate is string

@@ -3,6 +3,14 @@ export enum Gender {
   FEMALE = 'Perempuan'
 }
 
+export enum ResidenceStatus {
+  OWNED = 'Milik Sendiri',
+  RENTED = 'Sewa/Kontrak',
+  STAYING = 'Menumpang',
+  OFFICIAL_RESIDENCE = 'Rumah Dinas',
+  OTHERS = 'Lainnya'
+}
+
 export interface Resident {
   id: string;
   kkNumber: string;
@@ -18,6 +26,9 @@ export interface Resident {
   occupation: string;
   bloodType: string;
   phone: string;
+  fatherName: string;
+  motherName: string;
+  residenceStatus?: ResidenceStatus;
   photoUrl?: string;
   ownerId: string;
   createdAt: any;

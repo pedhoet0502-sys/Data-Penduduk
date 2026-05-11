@@ -5,8 +5,8 @@ import DatePicker, { registerLocale } from 'react-datepicker';
 import { id } from 'date-fns/locale';
 import { format, parseISO, isValid } from 'date-fns';
 import "react-datepicker/dist/react-datepicker.css";
-import { Gender, Resident } from '../types';
-import { RELIGIONS, EDUCATIONS, MARITAL_STATUSES, FAMILY_POSITIONS, OCCUPATIONS, BLOOD_TYPES, calculateAge } from '../lib/utils';
+import { Gender, Resident, ResidenceStatus } from '../types';
+import { RELIGIONS, EDUCATIONS, MARITAL_STATUSES, FAMILY_POSITIONS, OCCUPATIONS, BLOOD_TYPES, RESIDENCE_STATUSES, calculateAge } from '../lib/utils';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../lib/firebase';
 
@@ -45,6 +45,9 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
     maritalStatus: MARITAL_STATUSES[0],
     familyPosition: FAMILY_POSITIONS[0],
     occupation: OCCUPATIONS[0],
+    residenceStatus: ResidenceStatus.OWNED,
+    fatherName: '',
+    motherName: '',
     bloodType: '-',
     phone: '',
     photoUrl: '',
@@ -69,6 +72,9 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
         maritalStatus: initialData.maritalStatus || MARITAL_STATUSES[0],
         familyPosition: initialData.familyPosition || FAMILY_POSITIONS[0],
         occupation: initialData.occupation || OCCUPATIONS[0],
+        residenceStatus: initialData.residenceStatus || ResidenceStatus.OWNED,
+        fatherName: initialData.fatherName || '',
+        motherName: initialData.motherName || '',
         bloodType: initialData.bloodType || '-',
         phone: initialData.phone || '',
         photoUrl: initialData.photoUrl || '',
@@ -87,6 +93,9 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
         maritalStatus: MARITAL_STATUSES[0],
         familyPosition: FAMILY_POSITIONS[0],
         occupation: OCCUPATIONS[0],
+        residenceStatus: ResidenceStatus.OWNED,
+        fatherName: '',
+        motherName: '',
         bloodType: '-',
         phone: '',
         photoUrl: '',
@@ -169,6 +178,18 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
     }
     if (!formData.occupation) {
       setError('Pilih Pekerjaan');
+      return;
+    }
+    if (formData.familyPosition === 'Kepala Keluarga' && !formData.residenceStatus) {
+      setError('Pilih Status Tempat Tinggal');
+      return;
+    }
+    if (!formData.fatherName.trim()) {
+      setError('Isi Nama Ayah');
+      return;
+    }
+    if (!formData.motherName.trim()) {
+      setError('Isi Nama Ibu');
       return;
     }
     if (formData.phone && !/^\d+$/.test(formData.phone)) {
@@ -425,6 +446,22 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
                 </select>
               </div>
 
+              {formData.familyPosition === 'Kepala Keluarga' && (
+                <div className="space-y-1.5 col-span-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Status Tempat Tinggal</label>
+                  <select
+                    name="residenceStatus"
+                    value={formData.residenceStatus}
+                    onChange={handleInputChange}
+                    className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500/50 cursor-pointer"
+                    id="select-residenceStatus"
+                    required
+                  >
+                    {RESIDENCE_STATUSES.map(rs => <option key={rs} value={rs}>{rs}</option>)}
+                  </select>
+                </div>
+              )}
+
               <div className="space-y-1.5 col-span-2">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Nomor Telepon / WhatsApp</label>
                 <input
@@ -435,6 +472,34 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
                   placeholder="Contoh: 081234567890"
                   className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-3 text-sm focus:border-indigo-500/50 outline-none text-white transition-all shadow-inner"
                   id="input-phone"
+                />
+              </div>
+
+              <div className="space-y-1.5 col-span-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Nama Ayah</label>
+                <input
+                  type="text"
+                  name="fatherName"
+                  value={formData.fatherName}
+                  onChange={handleInputChange}
+                  placeholder="Nama Lengkap Ayah Kandung"
+                  className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-3 text-sm focus:border-indigo-500/50 outline-none text-white transition-all shadow-inner"
+                  id="input-fatherName"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5 col-span-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Nama Ibu</label>
+                <input
+                  type="text"
+                  name="motherName"
+                  value={formData.motherName}
+                  onChange={handleInputChange}
+                  placeholder="Nama Lengkap Ibu Kandung"
+                  className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-3 text-sm focus:border-indigo-500/50 outline-none text-white transition-all shadow-inner"
+                  id="input-motherName"
+                  required
                 />
               </div>
 
