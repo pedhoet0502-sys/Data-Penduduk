@@ -67,6 +67,15 @@
           "type": "string",
           "description": "Nama Ibu Kandung"
         },
+        "status": {
+          "type": "string",
+          "enum": ["Aktif", "Meninggal Dunia", "Pindah Domisili", "Tidak Aktif"],
+          "description": "Status Keberadaan Penduduk"
+        },
+        "inactiveDate": {
+          "type": "string",
+          "description": "Tanggal Non-Aktif (jika meninggal/pindah)"
+        },
         "residenceStatus": {
           "type": "string",
           "enum": ["Milik Sendiri", "Sewa/Kontrak", "Menumpang", "Rumah Dinas", "Lainnya"],
@@ -90,12 +99,31 @@
         }
       },
       "required": ["kkNumber", "fullName", "nik", "gender", "birthPlace", "birthDate", "ownerId"]
+    },
+    "Mutation": {
+      "title": "Mutation",
+      "description": "Data Mutasi Penduduk",
+      "type": "object",
+      "properties": {
+        "residentId": { "type": "string", "description": "ID Penduduk terkait" },
+        "residentName": { "type": "string", "description": "Nama Penduduk" },
+        "type": { "type": "string", "enum": ["Kelahiran", "Kematian", "Penduduk Datang", "Penduduk Pindah"] },
+        "date": { "type": "string", "description": "Tanggal Peristiwa" },
+        "description": { "type": "string", "description": "Keterangan tambahan" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["residentId", "residentName", "type", "date", "ownerId", "createdAt"]
     }
   },
   "firestore": {
     "residents": {
       "schema": { "$ref": "#/entities/Resident" },
       "description": "Koleksi data penduduk"
+    },
+    "mutations": {
+      "schema": { "$ref": "#/entities/Mutation" },
+      "description": "Koleksi data mutasi penduduk"
     }
   }
 }

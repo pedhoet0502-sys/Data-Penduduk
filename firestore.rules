@@ -15,12 +15,14 @@ service cloud.firestore {
 
     // Resident Validation
     function isValidResident(data) {
-      let requiredFields = ['kkNumber', 'fullName', 'nik', 'gender', 'birthPlace', 'birthDate', 'religion', 'education', 'maritalStatus', 'familyPosition', 'occupation', 'bloodType', 'phone', 'ownerId', 'createdAt', 'updatedAt', 'fatherName', 'motherName'];
+      let requiredFields = ['kkNumber', 'fullName', 'nik', 'gender', 'birthPlace', 'birthDate', 'religion', 'education', 'maritalStatus', 'familyPosition', 'occupation', 'bloodType', 'phone', 'ownerId', 'createdAt', 'updatedAt', 'fatherName', 'motherName', 'status'];
       return data.keys().hasAll(requiredFields)
         // Check if residenceStatus is required
         && (data.familyPosition != 'Kepala Keluarga' || (data.keys().hasAll(['residenceStatus']) && data.residenceStatus in ['Milik Sendiri', 'Sewa/Kontrak', 'Menumpang', 'Rumah Dinas', 'Lainnya']))
-        // Allow slightly more keys to be future-proof and handle optional photoUrl
-        && data.keys().size() >= 18 && data.keys().size() <= 21
+        // Allow slightly more keys to be future-proof and handle optional photoUrl and inactiveDate
+        && data.keys().size() >= 19 && data.keys().size() <= 23
+        && data.status in ['Aktif', 'Meninggal Dunia', 'Pindah Domisili', 'Tidak Aktif']
+        && (!data.keys().hasAny(['inactiveDate']) || data.inactiveDate is string)
         && data.kkNumber is string && data.kkNumber.size() == 16
         && data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 200
         && data.nik is string && data.nik.size() == 16
@@ -42,6 +44,19 @@ service cloud.firestore {
         && data.updatedAt is timestamp;
     }
 
+    // Mutation Validation
+    function isValidMutation(data) {
+      let requiredFields = ['residentId', 'residentName', 'type', 'date', 'ownerId', 'createdAt'];
+      return data.keys().hasAll(requiredFields)
+        && data.keys().size() >= 6 && data.keys().size() <= 8
+        && isValidId(data.residentId)
+        && data.type in ['Kelahiran', 'Kematian', 'Penduduk Datang', 'Penduduk Pindah']
+        && data.date is string
+        && (!data.keys().hasAny(['description']) || (data.description is string && data.description.size() <= 1000))
+        && data.ownerId == request.auth.uid
+        && data.createdAt is timestamp;
+    }
+
     match /residents/{residentId} {
       allow create: if isSignedIn() 
         && isValidId(residentId)
@@ -56,14 +71,24 @@ service cloud.firestore {
            incoming().ownerId == existing().ownerId &&
            incoming().createdAt == existing().createdAt &&
            incoming().updatedAt == request.time) ||
-          // Action: Quick Status Update
-          (incoming().diff(existing()).affectedKeys().hasOnly(['maritalStatus', 'familyPosition', 'updatedAt']) &&
+          // Action: Quick Status Update / Mutation Change
+          (incoming().diff(existing()).affectedKeys().hasOnly(['maritalStatus', 'familyPosition', 'status', 'inactiveDate', 'updatedAt']) &&
            incoming().updatedAt == request.time)
         );
       
       allow delete: if isOwner(existing().ownerId);
       
       allow get: if isOwner(existing().ownerId);
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /mutations/{mutationId} {
+      allow create: if isSignedIn() 
+        && isValidId(mutationId)
+        && isValidMutation(incoming())
+        && incoming().createdAt == request.time;
+      
+      allow get, delete: if isOwner(existing().ownerId);
       allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
     }
   }

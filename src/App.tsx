@@ -14,23 +14,28 @@ import {
 } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 import { motion, AnimatePresence } from 'motion/react';
+import { format, parseISO } from 'date-fns';
 import { Plus, Search, LogOut, LogIn, Database, Users, User, Fingerprint, RefreshCcw, CheckCircle2, Filter, SlidersHorizontal, ChevronDown, BarChart3, TrendingUp, Mars, Venus } from 'lucide-react';
 import { db, auth } from './lib/firebase';
-import { Resident, Gender } from './types';
-import { RELIGIONS, EDUCATIONS, FAMILY_POSITIONS } from './lib/utils';
+import { Resident, Gender, Mutation, MutationType, ResidentStatus } from './types';
+import { RELIGIONS, EDUCATIONS, FAMILY_POSITIONS, RESIDENCE_STATUSES } from './lib/utils';
 import { ResidentCard } from './components/ResidentCard';
 import { ResidentForm } from './components/ResidentForm';
 import { ResidentDetail } from './components/ResidentDetail';
+import { MutationForm } from './components/MutationForm';
 import { StatsDashboard } from './components/StatsDashboard';
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { Toast, ToastType } from './components/Toast';
 import { handleFirestoreError, OperationType } from './lib/error-handler';
+import { History } from 'lucide-react';
 
 const provider = new GoogleAuthProvider();
 
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [residents, setResidents] = useState<Resident[]>([]);
+  const [mutations, setMutations] = useState<Mutation[]>([]);
+  const [activeTab, setActiveTab] = useState<'residents' | 'mutations'>('residents');
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [isOnline, setIsOnline] = useState(window.navigator.onLine);
@@ -39,13 +44,16 @@ export default function App() {
   const [filterReligion, setFilterReligion] = useState<string>('Semua');
   const [filterEducation, setFilterEducation] = useState<string>('Semua');
   const [filterFamilyPosition, setFilterFamilyPosition] = useState<string>('Semua');
+  const [filterResidenceStatus, setFilterResidenceStatus] = useState<string>('Semua');
   const [showFilters, setShowFilters] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
+  const [isMutationFormOpen, setIsMutationFormOpen] = useState(false);
   const [editingResident, setEditingResident] = useState<Resident | null>(null);
   const [viewingResident, setViewingResident] = useState<Resident | null>(null);
+  const [mutationResident, setMutationResident] = useState<Resident | null>(null);
   const [residentIdToDelete, setResidentIdToDelete] = useState<string | null>(null);
   
   // Toast state
@@ -87,7 +95,8 @@ export default function App() {
     const q = query(
       collection(db, 'residents'),
       where('ownerId', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      orderBy('kkNumber', 'asc'),
+      orderBy('fullName', 'asc')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -98,6 +107,31 @@ export default function App() {
       setResidents(data);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'residents');
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setMutations([]);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'mutations'),
+      where('ownerId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Mutation[];
+      setMutations(data);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'mutations');
     });
 
     return () => unsubscribe();
@@ -123,7 +157,12 @@ export default function App() {
     if (!user) return;
     setSyncing(true);
     try {
-      const q = query(collection(db, 'residents'), where('ownerId', '==', user.uid));
+      const q = query(
+        collection(db, 'residents'), 
+        where('ownerId', '==', user.uid),
+        orderBy('kkNumber', 'asc'),
+        orderBy('fullName', 'asc')
+      );
       const querySnapshot = await getDocs(q);
       const data = querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -158,6 +197,8 @@ export default function App() {
     if (!payload.occupation) payload.occupation = 'Belum/Tidak Bekerja';
     if (!payload.bloodType) payload.bloodType = '-';
     if (!payload.phone) payload.phone = '';
+    if (!payload.status) payload.status = ResidentStatus.ACTIVE;
+    if (!payload.inactiveDate) payload.inactiveDate = '';
 
     try {
       if (isUpdate) {
@@ -201,6 +242,38 @@ export default function App() {
     }
   };
 
+  const handleMutationSubmit = async (mutationData: Partial<Mutation>, updatedStatus: ResidentStatus, inactiveDate: string) => {
+    if (!user) return;
+    setSyncing(true);
+
+    try {
+      // 1. Add Mutation Record
+      await addDoc(collection(db, 'mutations'), {
+        ...mutationData,
+        ownerId: user.uid,
+        createdAt: serverTimestamp(),
+      });
+
+      // 2. Update Resident Status
+      if (mutationData.residentId) {
+        const docRef = doc(db, 'residents', mutationData.residentId);
+        await updateDoc(docRef, {
+          status: updatedStatus,
+          inactiveDate: inactiveDate,
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      showToast('Mutasi berhasil dicatat');
+      setIsDetailOpen(false);
+    } catch (error) {
+      showToast('Gagal mencatat mutasi', 'error');
+      handleFirestoreError(error, OperationType.WRITE, 'mutations/create-with-resident-update');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const confirmDelete = (id: string) => {
     setResidentIdToDelete(id);
     setIsConfirmOpen(true);
@@ -216,6 +289,13 @@ export default function App() {
 
   const filteredResidents = useMemo(() => {
     return residents.filter(r => {
+      // If on residents tab, only show ACTIVE residents unless searching or filtering specifically
+      const isActuallySearchOrFilter = searchTerm || filterGender !== 'Semua' || filterReligion !== 'Semua' || filterEducation !== 'Semua' || filterFamilyPosition !== 'Semua' || filterResidenceStatus !== 'Semua';
+      
+      if (!isActuallySearchOrFilter && activeTab === 'residents') {
+        if (r.status && r.status !== ResidentStatus.ACTIVE) return false;
+      }
+
       const matchSearch = (r.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.nik?.includes(searchTerm) ||
         r.kkNumber?.includes(searchTerm));
@@ -224,10 +304,19 @@ export default function App() {
       const matchReligion = filterReligion === 'Semua' || r.religion === filterReligion;
       const matchEducation = filterEducation === 'Semua' || r.education === filterEducation;
       const matchFamilyPosition = filterFamilyPosition === 'Semua' || r.familyPosition === filterFamilyPosition;
+      const matchResidenceStatus = filterResidenceStatus === 'Semua' || r.residenceStatus === filterResidenceStatus;
 
-      return matchSearch && matchGender && matchReligion && matchEducation && matchFamilyPosition;
+      return matchSearch && matchGender && matchReligion && matchEducation && matchFamilyPosition && matchResidenceStatus;
     });
-  }, [residents, searchTerm, filterGender, filterReligion, filterEducation, filterFamilyPosition]);
+  }, [residents, searchTerm, filterGender, filterReligion, filterEducation, filterFamilyPosition, filterResidenceStatus, activeTab]);
+
+  const filteredMutations = useMemo(() => {
+    return mutations.filter(m => {
+      const matchSearch = m.residentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          m.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchSearch;
+    });
+  }, [mutations, searchTerm]);
 
   if (loading) {
     return (
@@ -310,6 +399,24 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      {/* Tab Switcher */}
+      <div className="px-6 mt-6 max-w-2xl mx-auto">
+        <div className="flex p-1 bg-slate-900/80 rounded-2xl border border-white/5 shadow-inner">
+          <button
+            onClick={() => setActiveTab('residents')}
+            className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'residents' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+          >
+            Daftar Penduduk
+          </button>
+          <button
+            onClick={() => setActiveTab('mutations')}
+            className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'mutations' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+          >
+            Riwayat Mutasi
+          </button>
+        </div>
+      </div>
 
       <main className="px-6 py-6 max-w-2xl mx-auto">
         {/* Offline Banner */}
@@ -425,7 +532,7 @@ export default function App() {
             title="Filter Data"
           >
             <SlidersHorizontal size={20} />
-            {(filterGender !== 'Semua' || filterReligion !== 'Semua' || filterEducation !== 'Semua' || filterFamilyPosition !== 'Semua') && (
+            {(filterGender !== 'Semua' || filterReligion !== 'Semua' || filterEducation !== 'Semua' || filterFamilyPosition !== 'Semua' || filterResidenceStatus !== 'Semua') && (
               <div className="absolute top-3 right-3">
                 <motion.span 
                   animate={{ opacity: [0.2, 0.5, 0.2], scale: [1, 2, 1] }}
@@ -451,7 +558,7 @@ export default function App() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden mb-8"
             >
-              <div className="bg-slate-900/60 border border-white/10 rounded-2xl p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-slate-900/60 border border-white/10 rounded-2xl p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
                     Jenis Kelamin
@@ -505,7 +612,20 @@ export default function App() {
                     {EDUCATIONS.map(e => <option key={e} value={e}>{e}</option>)}
                   </select>
                 </div>
-                <div className="sm:col-span-2 lg:col-span-4 pt-2">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                    Status Tinggal
+                  </label>
+                  <select 
+                    value={filterResidenceStatus}
+                    onChange={(e) => setFilterResidenceStatus(e.target.value)}
+                    className="w-full bg-slate-950/50 border border-white/5 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500 transition-all appearance-none"
+                  >
+                    <option value="Semua">Status Tinggal</option>
+                    {RESIDENCE_STATUSES.map(rs => <option key={rs} value={rs}>{rs}</option>)}
+                  </select>
+                </div>
+                <div className="sm:col-span-2 lg:col-span-5 pt-2">
                   <motion.button 
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -514,6 +634,7 @@ export default function App() {
                       setFilterReligion('Semua');
                       setFilterEducation('Semua');
                       setFilterFamilyPosition('Semua');
+                      setFilterResidenceStatus('Semua');
                       setSearchTerm('');
                     }}
                     className="w-full flex items-center justify-center gap-2 py-3 bg-slate-950/50 hover:bg-slate-950 border border-white/5 hover:border-indigo-500/50 rounded-xl text-xs font-bold text-slate-400 hover:text-indigo-400 transition-all uppercase tracking-widest group shadow-sm hover:shadow-indigo-500/10"
@@ -535,33 +656,93 @@ export default function App() {
 
         {/* List Content */}
         <div className="space-y-4">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500 px-2">Daftar Penduduk ({filteredResidents.length})</h2>
-          {filteredResidents.length > 0 ? (
-            <AnimatePresence>
-              {filteredResidents.map(resident => (
-                <ResidentCard
-                  key={resident.id}
-                  resident={resident}
-                  onEdit={(r) => {
-                    setEditingResident(r);
-                    setIsFormOpen(true);
-                  }}
-                  onDelete={confirmDelete}
-                  onViewDetail={(r) => {
-                    setViewingResident(r);
-                    setIsDetailOpen(true);
-                  }}
-                  onUpdate={handleSubmitResident}
-                />
-              ))}
-            </AnimatePresence>
+          {activeTab === 'residents' ? (
+            <>
+              <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500 px-2">Daftar Penduduk ({filteredResidents.length})</h2>
+              {filteredResidents.length > 0 ? (
+                <AnimatePresence>
+                  {filteredResidents.map(resident => (
+                    <ResidentCard
+                      key={resident.id}
+                      resident={resident}
+                      onEdit={(r) => {
+                        setEditingResident(r);
+                        setIsFormOpen(true);
+                      }}
+                      onDelete={confirmDelete}
+                      onViewDetail={(r) => {
+                        setViewingResident(r);
+                        setIsDetailOpen(true);
+                      }}
+                      onUpdate={handleSubmitResident}
+                      onAddMutation={(r) => {
+                        setMutationResident(r);
+                        setIsMutationFormOpen(true);
+                      }}
+                    />
+                  ))}
+                </AnimatePresence>
+              ) : (
+                <div className="text-center py-20 bg-slate-900/20 rounded-3xl border border-dashed border-white/5">
+                  <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-slate-700 mx-auto mb-4">
+                    <Users size={32} />
+                  </div>
+                  <p className="text-slate-500 font-medium">{searchTerm ? 'Data tidak ditemukan' : 'Belum ada data penduduk'}</p>
+                </div>
+              )}
+            </>
           ) : (
-            <div className="text-center py-20 bg-slate-900/20 rounded-3xl border border-dashed border-white/5">
-              <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-slate-700 mx-auto mb-4">
-                <Users size={32} />
-              </div>
-              <p className="text-slate-500 font-medium">{searchTerm ? 'Data tidak ditemukan' : 'Belum ada data penduduk'}</p>
-            </div>
+            <>
+              <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500 px-2">Riwayat Mutasi ({filteredMutations.length})</h2>
+              {filteredMutations.length > 0 ? (
+                <AnimatePresence>
+                  {filteredMutations.map(mutation => (
+                    <motion.div
+                      key={mutation.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="bg-slate-900/80 border border-white/5 p-5 rounded-2xl shadow-sm hover:border-indigo-500/30 transition-all flex items-start gap-4"
+                    >
+                      <div className={`mt-1 p-3 rounded-xl flex items-center justify-center text-white shrink-0 ${
+                        mutation.type === MutationType.DEATH ? 'bg-rose-500/20 text-rose-400' :
+                        mutation.type === MutationType.MOVING ? 'bg-amber-500/20 text-amber-400' :
+                        mutation.type === MutationType.COMING ? 'bg-indigo-500/20 text-indigo-400' :
+                        'bg-emerald-500/20 text-emerald-400'
+                      }`}>
+                        <History size={20} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <h3 className="font-bold text-white tracking-tight truncate">{mutation.residentName}</h3>
+                          <span className="text-[10px] font-mono text-slate-500 shrink-0">{format(parseISO(mutation.date), 'dd MMM yyyy')}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${
+                            mutation.type === MutationType.DEATH ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
+                            mutation.type === MutationType.MOVING ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                            mutation.type === MutationType.COMING ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' :
+                            'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          }`}>
+                            {mutation.type}
+                          </span>
+                        </div>
+                        {mutation.description && (
+                          <p className="text-xs text-slate-400 leading-relaxed italic border-l-2 border-white/5 pl-3 mt-2">{mutation.description}</p>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              ) : (
+                <div className="text-center py-20 bg-slate-900/20 rounded-3xl border border-dashed border-white/5">
+                  <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-slate-700 mx-auto mb-4">
+                    <History size={32} className="text-slate-700" />
+                  </div>
+                  <p className="text-slate-500 font-medium">{searchTerm ? 'Data mutasi tidak ditemukan' : 'Belum ada riwayat mutasi'}</p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
@@ -605,8 +786,24 @@ export default function App() {
           setEditingResident(r);
           setIsFormOpen(true);
         }}
-        onDelete={confirmDelete}
+        onAddMutation={(r) => {
+          setMutationResident(r);
+          setIsMutationFormOpen(true);
+        }}
       />
+
+      {/* Mutation Form Dialog */}
+      {mutationResident && (
+        <MutationForm
+          isOpen={isMutationFormOpen}
+          resident={mutationResident}
+          onClose={() => {
+            setIsMutationFormOpen(false);
+            setMutationResident(null);
+          }}
+          onSubmit={handleMutationSubmit}
+        />
+      )}
 
       {/* Confirmation Modal */}
       <ConfirmationModal

@@ -5,7 +5,7 @@ import DatePicker, { registerLocale } from 'react-datepicker';
 import { id } from 'date-fns/locale';
 import { format, parseISO, isValid } from 'date-fns';
 import "react-datepicker/dist/react-datepicker.css";
-import { Gender, Resident, ResidenceStatus } from '../types';
+import { Gender, Resident, ResidenceStatus, ResidentStatus } from '../types';
 import { RELIGIONS, EDUCATIONS, MARITAL_STATUSES, FAMILY_POSITIONS, OCCUPATIONS, BLOOD_TYPES, RESIDENCE_STATUSES, calculateAge } from '../lib/utils';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../lib/firebase';
@@ -51,6 +51,7 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
     bloodType: '-',
     phone: '',
     photoUrl: '',
+    status: ResidentStatus.ACTIVE,
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +79,8 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
         bloodType: initialData.bloodType || '-',
         phone: initialData.phone || '',
         photoUrl: initialData.photoUrl || '',
+        status: initialData.status || ResidentStatus.ACTIVE,
+        inactiveDate: initialData.inactiveDate || '',
       });
       setPreviewUrl(initialData.photoUrl || null);
     } else {
@@ -99,6 +102,7 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
         bloodType: '-',
         phone: '',
         photoUrl: '',
+        status: ResidentStatus.ACTIVE,
       });
       setPreviewUrl(null);
     }

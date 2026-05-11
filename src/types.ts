@@ -11,6 +11,31 @@ export enum ResidenceStatus {
   OTHERS = 'Lainnya'
 }
 
+export enum ResidentStatus {
+  ACTIVE = 'Aktif',
+  DECEASED = 'Meninggal Dunia',
+  MOVED_OUT = 'Pindah Domisili',
+  INACTIVE = 'Tidak Aktif'
+}
+
+export enum MutationType {
+  BIRTH = 'Kelahiran',
+  DEATH = 'Kematian',
+  COMING = 'Penduduk Datang',
+  MOVING = 'Penduduk Pindah'
+}
+
+export interface Mutation {
+  id: string;
+  residentId: string;
+  residentName: string;
+  type: MutationType;
+  date: string;
+  description: string;
+  ownerId: string;
+  createdAt: any;
+}
+
 export interface Resident {
   id: string;
   kkNumber: string;
@@ -29,6 +54,8 @@ export interface Resident {
   fatherName: string;
   motherName: string;
   residenceStatus?: ResidenceStatus;
+  status: ResidentStatus;
+  inactiveDate?: string;
   photoUrl?: string;
   ownerId: string;
   createdAt: any;

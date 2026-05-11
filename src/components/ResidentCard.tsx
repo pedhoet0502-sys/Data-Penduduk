@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { User, CreditCard, Calendar, MapPin, Trash2, Edit2, ChevronRight, Zap, Check, X, RefreshCcw, CheckCircle2 } from 'lucide-react';
-import { Resident } from '../types';
+import { User, CreditCard, Calendar, MapPin, Trash2, Edit2, ChevronRight, Zap, Check, X, RefreshCcw, CheckCircle2, History } from 'lucide-react';
+import { Resident, ResidentStatus } from '../types';
 import { calculateAge, MARITAL_STATUSES, FAMILY_POSITIONS } from '../lib/utils';
 import { format } from 'date-fns';
 
@@ -11,9 +11,10 @@ interface ResidentCardProps {
   onDelete: (id: string) => void;
   onViewDetail: (resident: Resident) => void;
   onUpdate: (data: Partial<Resident>) => Promise<void>;
+  onAddMutation?: (resident: Resident) => void;
 }
 
-export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, onDelete, onViewDetail, onUpdate }) => {
+export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, onDelete, onViewDetail, onUpdate, onAddMutation }) => {
   const [isInlineEditing, setIsInlineEditing] = useState(false);
   const [inlineFamilyPosition, setInlineFamilyPosition] = useState(resident.familyPosition);
   const [inlineMaritalStatus, setInlineMaritalStatus] = useState(resident.maritalStatus);
@@ -127,6 +128,18 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
           >
             <Zap size={16} />
           </button>
+          {(resident.status || ResidentStatus.ACTIVE) === ResidentStatus.ACTIVE && onAddMutation && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddMutation(resident);
+              }}
+              className="p-2 text-slate-500 hover:text-amber-400 transition-colors"
+              title="Mutasi Data"
+            >
+              <History size={16} />
+            </button>
+          )}
           <button
             onClick={(e) => {
               e.stopPropagation();

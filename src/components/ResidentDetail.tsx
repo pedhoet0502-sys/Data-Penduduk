@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, CreditCard, MapPin, Calendar, Scroll, Heart, Users, Briefcase, RefreshCcw, CheckCircle2, GraduationCap, Droplets, Phone, Home } from 'lucide-react';
-import { Resident } from '../types';
+import { X, User, CreditCard, MapPin, Calendar, Scroll, Heart, Users, Briefcase, RefreshCcw, CheckCircle2, GraduationCap, Droplets, Phone, Home, History } from 'lucide-react';
+import { Resident, ResidentStatus } from '../types';
 import { calculateAge } from '../lib/utils';
 import { format } from 'date-fns';
 
@@ -10,11 +10,18 @@ interface ResidentDetailProps {
   onClose: () => void;
   resident: Resident | null;
   onEdit: (resident: Resident) => void;
-  onDelete: (id: string) => void;
+  onAddMutation?: (resident: Resident) => void;
 }
 
-export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose, resident, onEdit, onDelete }) => {
+export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose, resident, onEdit, onAddMutation }) => {
   if (!resident || !isOpen) return null;
+
+  const statusColors = {
+    [ResidentStatus.ACTIVE]: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    [ResidentStatus.DECEASED]: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+    [ResidentStatus.MOVED_OUT]: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    [ResidentStatus.INACTIVE]: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+  };
 
   const DetailItem = ({ icon: Icon, label, value, color = "text-indigo-400", truncate = false }: any) => (
     <div className="flex gap-4 p-4 rounded-xl bg-slate-950/30 border border-white/5 min-w-0">
@@ -50,7 +57,12 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
               </div>
               <div>
                 <h2 className="text-xl font-bold text-white leading-tight">{resident.fullName}</h2>
-                <p className="text-xs text-indigo-400 font-mono tracking-tighter">NIK: {resident.nik}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-xs text-indigo-400 font-mono tracking-tighter">NIK: {resident.nik}</p>
+                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${statusColors[resident.status || ResidentStatus.ACTIVE]}`}>
+                    {resident.status || ResidentStatus.ACTIVE}
+                  </span>
+                </div>
               </div>
             </div>
             <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors">
@@ -112,19 +124,16 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
           </div>
 
           {/* Footer */}
-          <div className="p-6 border-t border-white/10 bg-slate-950/30 flex justify-end gap-3">
-             <button 
-              onClick={() => {
-                onDelete(resident.id);
-                // onClose is usually called by the prop if requested, but let's assume we want to keep detail open until confirm? 
-                // Actually usually we close the detail view when starting deletion or let it stay?
-                // Let's close it to focus on the modal.
-                onClose();
-              }}
-              className="px-6 py-3 bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 font-bold rounded-xl transition-all"
-            >
-              Hapus Data
-            </button>
+          <div className="p-6 border-t border-white/10 bg-slate-950/30 flex flex-wrap justify-end gap-3">
+             {(resident.status || ResidentStatus.ACTIVE) === ResidentStatus.ACTIVE && onAddMutation && (
+                <button
+                  onClick={() => onAddMutation(resident)}
+                  className="px-6 py-3 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 font-bold rounded-xl transition-all flex items-center gap-2 mr-auto"
+                >
+                  <History size={16} />
+                  Mutasi Data
+                </button>
+             )}
              <button 
               onClick={() => onEdit(resident)}
               className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-600/20"
