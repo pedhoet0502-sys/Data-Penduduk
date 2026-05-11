@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, PieChart as PieIcon, BarChart3, TrendingUp, Users, Calendar, Briefcase } from 'lucide-react';
+import { X, PieChart as PieIcon, BarChart3, TrendingUp, Users, Calendar, Briefcase, Database } from 'lucide-react';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, Cell as RechartsCell
@@ -49,29 +49,58 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
     const genderDist: Record<string, number> = { 'Laki-laki': 0, 'Perempuan': 0 };
     const occupationDist: Record<string, number> = {};
     const productiveDist = { 'Belum Produktif (0-14)': 0, 'Produktif (15-64)': 0, 'Tidak Produktif (>64)': 0 };
+    const categoryDist: Record<string, number> = {
+      'Balita': 0,
+      'Anak-anak': 0,
+      'Remaja': 0,
+      'Dewasa': 0,
+      'Lansia': 0
+    };
     let totalAge = 0;
     let minAge = Infinity;
     let maxAge = -Infinity;
 
-    // Pre-initialize categories for cleaner pyramid
-    ['0-5 Thn', '6-12 Thn', '13-18 Thn', '19-45 Thn', '46-65 Thn', '>65 Thn'].forEach(cat => {
+    // Pre-initialize standard 5-year categories for a proper pyramid shape
+    const PYRAMID_CATEGORIES = [
+      '0-4', '5-9', '10-14', '15-19', '20-24', '25-29', '30-34', '35-39', 
+      '40-44', '45-49', '50-54', '55-59', '60-64', '65-69', '70+'
+    ];
+    
+    PYRAMID_CATEGORIES.forEach(cat => {
       pyramidGroups[cat] = { male: 0, female: 0 };
     });
 
     residents.forEach(r => {
       const age = calculateAge(r.birthDate);
-      const cat = getAgeCategory(age);
-      ageGroupsCount[cat] = (ageGroupsCount[cat] || 0) + 1;
       
-      if (!pyramidGroups[cat]) pyramidGroups[cat] = { male: 0, female: 0 };
+      // Categorical groups for the categories chart
+      if (age <= 5) categoryDist['Balita']++;
+      else if (age <= 12) categoryDist['Anak-anak']++;
+      else if (age <= 17) categoryDist['Remaja']++;
+      else if (age <= 59) categoryDist['Dewasa']++;
+      else categoryDist['Lansia']++;
+      
+      // Determine pyramid category
+      let pyramidCat = '';
+      if (age >= 70) pyramidCat = '70+';
+      else {
+        const floor = Math.floor(age / 5) * 5;
+        pyramidCat = `${floor}-${floor + 4}`;
+      }
+      
+      if (!pyramidGroups[pyramidCat]) pyramidGroups[pyramidCat] = { male: 0, female: 0 };
 
       if (r.gender === 'Laki-laki') {
         genderDist['Laki-laki']++;
-        pyramidGroups[cat].male++;
+        pyramidGroups[pyramidCat].male++;
       } else {
         genderDist['Perempuan']++;
-        pyramidGroups[cat].female++;
+        pyramidGroups[pyramidCat].female++;
       }
+      
+      // Age group for general stats (legacy mapping for simplicity)
+      const cat = getAgeCategory(age);
+      ageGroupsCount[cat] = (ageGroupsCount[cat] || 0) + 1;
       
       // Productive calculations
       if (age < 15) productiveDist['Belum Produktif (0-14)']++;
@@ -93,16 +122,15 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
 
     const pyramidMax = Math.max(...Object.values(pyramidGroups).map(g => Math.max(g.male, g.female)), 1);
 
-    const pyramidData = Object.entries(pyramidGroups).map(([name, counts]) => ({
+    const pyramidData = PYRAMID_CATEGORIES.map(name => ({
       name,
-      male: -counts.male,
-      female: counts.female,
-    })).sort((a,b) => {
-        const getStart = (s: string) => parseInt(s.match(/\d+/)?.at(0) || '0');
-        return getStart(a.name) - getStart(b.name);
-    });
+      male: pyramidGroups[name]?.male || 0,
+      female: pyramidGroups[name]?.female || 0,
+    }));
 
     const productiveData = Object.entries(productiveDist).map(([name, value]) => ({ name, value }));
+
+    const categoryData = Object.entries(categoryDist).map(([name, value]) => ({ name, value }));
 
     const genderData = [
       { name: 'Laki-laki', value: genderDist['Laki-laki'] },
@@ -121,6 +149,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
       genderData,
       occupationData,
       productiveData,
+      categoryData,
       minAge: residents.length > 0 ? minAge : 0,
       maxAge: residents.length > 0 ? maxAge : 0,
       avgAge: residents.length > 0 ? (totalAge / residents.length).toFixed(1) : 0,
@@ -203,6 +232,64 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
               </motion.div>
             </div>
 
+            {/* Age Category Bar Chart */}
+            <motion.div variants={itemVariants} className="mb-10">
+              <div className="relative bg-slate-800/30 p-8 rounded-[2.5rem] border border-white/5 overflow-hidden group">
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/10 blur-[80px] rounded-full group-hover:bg-indigo-500/20 transition-colors" />
+                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                  <BarChart3 size={18} className="text-amber-400" /> Distribusi Kategori Usia
+                </h3>
+                <div className="h-[250px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stats.categoryData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                      <XAxis 
+                        dataKey="name" 
+                        stroke="#94a3b8" 
+                        fontSize={12} 
+                        tickLine={false} 
+                        axisLine={false}
+                        dy={10}
+                      />
+                      <YAxis 
+                        stroke="#94a3b8" 
+                        fontSize={12} 
+                        tickLine={false} 
+                        axisLine={false}
+                      />
+                      <Tooltip 
+                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                        contentStyle={{ 
+                          backgroundColor: '#0f172a', 
+                          borderColor: 'rgba(255,255,255,0.1)', 
+                          borderRadius: '1rem',
+                          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                        }}
+                      />
+                      <Bar 
+                        dataKey="value" 
+                        radius={[10, 10, 0, 0]} 
+                        animationDuration={1500}
+                      >
+                        {stats.categoryData.map((entry, index) => (
+                          <RechartsCell 
+                            key={`cell-${index}`} 
+                            fill={[
+                              '#60a5fa', // Blue (Balita)
+                              '#fbbf24', // Amber (Anak)
+                              '#f472b6', // Pink (Remaja)
+                              '#818cf8', // Indigo (Dewasa)
+                              '#34d399'  // Emerald (Lansia)
+                            ][index % 5]} 
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </motion.div>
+
             {/* Age Analysis Title */}
             <motion.div variants={itemVariants} className="flex items-center gap-3 mb-6 mt-10">
               <div className="w-10 h-1 bg-indigo-500 rounded-full" />
@@ -261,61 +348,137 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
                   </ResponsiveContainer>
                 </div>
               </div>
+            </motion.div>
 
-              {/* Pyramid Chart: Age Groups */}
-              <div className="relative bg-slate-800/30 p-8 rounded-[2.5rem] border border-white/5 overflow-hidden group">
+            {/* Pyramid Chart: Age Groups */}
+            <motion.div variants={itemVariants} className="mb-10">
+              <div className="relative bg-slate-800/30 p-8 rounded-[2.5rem] border border-white/5 group">
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/10 blur-[80px] rounded-full group-hover:bg-indigo-500/20 transition-colors" />
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-8">
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <BarChart3 size={18} className="text-indigo-400" /> Piramida Penduduk
+                    <Database size={18} className="text-indigo-400" /> Piramida Penduduk
                   </h3>
-                  <div className="hidden sm:flex gap-4 text-[10px] font-bold">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                      <span className="text-slate-400 font-black uppercase tracking-tighter">Laki-laki</span>
+                  <div className="flex gap-6 text-[10px] font-bold">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
+                      <span className="text-slate-400 uppercase tracking-widest text-[9px]">Laki-laki</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-pink-500" />
-                      <span className="text-slate-400 font-black uppercase tracking-tighter">Perempuan</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.5)]" />
+                      <span className="text-slate-400 uppercase tracking-widest text-[9px]">Perempuan</span>
                     </div>
                   </div>
                 </div>
-                <div className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart 
-                      layout="vertical" 
-                      data={stats.pyramidData} 
-                      stackOffset="sign"
-                      margin={{ left: 0, right: 20 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
-                      <XAxis 
-                        type="number" 
-                        domain={[-stats.pyramidMax, stats.pyramidMax]}
-                        tickFormatter={(v: number) => Math.abs(v).toString()} 
-                        stroke="#94a3b8" 
-                        fontSize={10}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis 
-                        type="category" 
-                        dataKey="name" 
-                        stroke="#94a3b8" 
-                        fontSize={10} 
-                        tickLine={false}
-                        axisLine={false}
-                        width={65}
-                      />
-                      <Tooltip 
-                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                        contentStyle={{ backgroundColor: '#0f172a', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '1rem' }}
-                        formatter={(value, name) => [Math.abs(value as number), name === 'male' ? 'Laki-laki' : 'Perempuan']}
-                      />
-                      <Bar dataKey="male" stackId="stack" fill="#6366f1" radius={[4, 0, 0, 4]} />
-                      <Bar dataKey="female" stackId="stack" fill="#ec4899" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+
+                <div className="flex items-stretch justify-center h-[550px] w-full gap-1 sm:gap-2 lg:gap-4 mt-6">
+                  {/* Left: Male Chart */}
+                  <div className="flex-1 h-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart 
+                        layout="vertical" 
+                        data={stats.pyramidData} 
+                        margin={{ left: 10, right: 0, top: 0, bottom: 0 }}
+                      >
+                        <XAxis 
+                          type="number" 
+                          domain={[0, stats.pyramidMax]} 
+                          reversed 
+                          hide
+                        />
+                        <YAxis 
+                          type="category" 
+                          dataKey="name" 
+                          hide 
+                        />
+                        <Tooltip 
+                          cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                          contentStyle={{ 
+                            backgroundColor: '#0f172a', 
+                            borderColor: 'rgba(255,255,255,0.1)', 
+                            borderRadius: '1rem',
+                            fontSize: '12px',
+                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                          }}
+                          formatter={(value: number) => [Math.abs(value), 'Laki-laki']}
+                          labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
+                        />
+                        <Bar 
+                          dataKey="male" 
+                          fill="#6366f1" 
+                          radius={[4, 0, 0, 4]} 
+                          barSize={24}
+                          animationDuration={1500}
+                        >
+                          {stats.pyramidData.map((entry, index) => (
+                            <RechartsCell key={`cell-m-${index}`} fill="#6366f1" />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Center: Age Labels */}
+                  <div className="flex flex-col justify-between py-1 w-14 md:w-20 bg-slate-900/20 rounded-xl border border-white/5 shadow-inner">
+                    {stats.pyramidData.map((cat, idx) => (
+                      <div key={idx} className="flex-1 flex items-center justify-center">
+                        <span className="text-[8px] md:text-[10px] font-black text-slate-400 whitespace-nowrap uppercase tracking-tighter">
+                          {cat.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Right: Female Chart */}
+                  <div className="flex-1 h-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart 
+                        layout="vertical" 
+                        data={stats.pyramidData} 
+                        margin={{ left: 0, right: 10, top: 0, bottom: 0 }}
+                      >
+                        <XAxis 
+                          type="number" 
+                          domain={[0, stats.pyramidMax]} 
+                          hide
+                        />
+                        <YAxis 
+                          type="category" 
+                          dataKey="name" 
+                          hide 
+                        />
+                        <Tooltip 
+                          cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                          contentStyle={{ 
+                            backgroundColor: '#0f172a', 
+                            borderColor: 'rgba(255,255,255,0.1)', 
+                            borderRadius: '1rem',
+                            fontSize: '12px',
+                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                          }}
+                          formatter={(value: number) => [value, 'Perempuan']}
+                          labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
+                        />
+                        <Bar 
+                          dataKey="female" 
+                          fill="#ec4899" 
+                          radius={[0, 4, 4, 0]} 
+                          barSize={24}
+                          animationDuration={1500}
+                        >
+                          {stats.pyramidData.map((entry, index) => (
+                            <RechartsCell key={`cell-f-${index}`} fill="#ec4899" />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                
+                {/* Scale Indicators */}
+                <div className="flex justify-between mt-6 px-2 text-[8px] font-bold uppercase tracking-widest text-slate-600">
+                  <span>Maks: {stats.pyramidMax} Orang</span>
+                  <span className="text-slate-500">Rentang Usia (Tahun)</span>
+                  <span>Maks: {stats.pyramidMax} Orang</span>
                 </div>
               </div>
             </motion.div>

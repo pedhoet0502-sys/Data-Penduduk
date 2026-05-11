@@ -17,12 +17,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Search, LogOut, LogIn, Database, Users, Fingerprint, RefreshCcw, CheckCircle2, Filter, SlidersHorizontal, ChevronDown, BarChart3, TrendingUp } from 'lucide-react';
 import { db, auth } from './lib/firebase';
 import { Resident, Gender } from './types';
-import { RELIGIONS, EDUCATIONS } from './lib/utils';
+import { RELIGIONS, EDUCATIONS, FAMILY_POSITIONS } from './lib/utils';
 import { ResidentCard } from './components/ResidentCard';
 import { ResidentForm } from './components/ResidentForm';
 import { ResidentDetail } from './components/ResidentDetail';
 import { StatsDashboard } from './components/StatsDashboard';
 import { ConfirmationModal } from './components/ConfirmationModal';
+import { Toast, ToastType } from './components/Toast';
 import { handleFirestoreError, OperationType } from './lib/error-handler';
 
 const provider = new GoogleAuthProvider();
@@ -37,6 +38,7 @@ export default function App() {
   const [filterGender, setFilterGender] = useState<string>('Semua');
   const [filterReligion, setFilterReligion] = useState<string>('Semua');
   const [filterEducation, setFilterEducation] = useState<string>('Semua');
+  const [filterFamilyPosition, setFilterFamilyPosition] = useState<string>('Semua');
   const [showFilters, setShowFilters] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -45,6 +47,17 @@ export default function App() {
   const [editingResident, setEditingResident] = useState<Resident | null>(null);
   const [viewingResident, setViewingResident] = useState<Resident | null>(null);
   const [residentIdToDelete, setResidentIdToDelete] = useState<string | null>(null);
+  
+  // Toast state
+  const [toast, setToast] = useState<{ isVisible: boolean; message: string; type: ToastType }>({
+    isVisible: false,
+    message: '',
+    type: 'success'
+  });
+
+  const showToast = (message: string, type: ToastType = 'success') => {
+    setToast({ isVisible: true, message, type });
+  };
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -119,7 +132,9 @@ export default function App() {
       setResidents(data);
       // Simulate network delay for UX feedback
       await new Promise(resolve => setTimeout(resolve, 800));
+      showToast('Data berhasil disinkronkan');
     } catch (error) {
+      showToast('Sinkronisasi gagal', 'error');
       handleFirestoreError(error, OperationType.LIST, 'residents');
     } finally {
       setSyncing(false);
@@ -159,7 +174,9 @@ export default function App() {
       }
       setIsFormOpen(false);
       setEditingResident(null);
+      showToast(isUpdate ? 'Data berhasil diperbarui' : 'Data berhasil ditambahkan');
     } catch (error) {
+      showToast('Gagal menyimpan data', 'error');
       handleFirestoreError(error, isUpdate ? OperationType.UPDATE : OperationType.CREATE, isUpdate ? `residents/${residentId}` : 'residents');
     } finally {
       setSyncing(false);
@@ -174,7 +191,10 @@ export default function App() {
         setIsDetailOpen(false);
       }
       setResidentIdToDelete(null);
+      setIsConfirmOpen(false);
+      showToast('Data berhasil dihapus');
     } catch (error) {
+      showToast('Gagal menghapus data', 'error');
       handleFirestoreError(error, OperationType.DELETE, 'residents');
     }
   };
@@ -193,10 +213,11 @@ export default function App() {
       const matchGender = filterGender === 'Semua' || r.gender === filterGender;
       const matchReligion = filterReligion === 'Semua' || r.religion === filterReligion;
       const matchEducation = filterEducation === 'Semua' || r.education === filterEducation;
+      const matchFamilyPosition = filterFamilyPosition === 'Semua' || r.familyPosition === filterFamilyPosition;
 
-      return matchSearch && matchGender && matchReligion && matchEducation;
+      return matchSearch && matchGender && matchReligion && matchEducation && matchFamilyPosition;
     });
-  }, [residents, searchTerm, filterGender, filterReligion, filterEducation]);
+  }, [residents, searchTerm, filterGender, filterReligion, filterEducation, filterFamilyPosition]);
 
   if (loading) {
     return (
@@ -354,8 +375,13 @@ export default function App() {
             title="Filter Data"
           >
             <SlidersHorizontal size={20} />
-            {(filterGender !== 'Semua' || filterReligion !== 'Semua' || filterEducation !== 'Semua') && (
-              <span className="w-2 h-2 rounded-full bg-amber-400 absolute top-3 right-3 animate-pulse"></span>
+            {(filterGender !== 'Semua' || filterReligion !== 'Semua' || filterEducation !== 'Semua' || filterFamilyPosition !== 'Semua') && (
+              <motion.span 
+                initial={{ opacity: 0.5, scale: 0.8 }}
+                animate={{ opacity: [0.5, 1, 0.5], scale: [0.8, 1.1, 0.8] }}
+                transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                className="w-2.5 h-2.5 rounded-full bg-emerald-400 absolute top-2.5 right-2.5 shadow-[0_0_8px_#10b981] ring-1 ring-emerald-500/50"
+              />
             )}
           </button>
         </div>
@@ -369,7 +395,7 @@ export default function App() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden mb-8"
             >
-              <div className="bg-slate-900/60 border border-white/10 rounded-2xl p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-slate-900/60 border border-white/10 rounded-2xl p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
                     Jenis Kelamin
@@ -382,6 +408,19 @@ export default function App() {
                     <option value="Semua">Semua Gender</option>
                     <option value={Gender.MALE}>Laki-laki</option>
                     <option value={Gender.FEMALE}>Perempuan</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                    Hubungan
+                  </label>
+                  <select 
+                    value={filterFamilyPosition}
+                    onChange={(e) => setFilterFamilyPosition(e.target.value)}
+                    className="w-full bg-slate-950/50 border border-white/5 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500 transition-all appearance-none"
+                  >
+                    <option value="Semua">Semua Hubungan</option>
+                    {FAMILY_POSITIONS.map(fp => <option key={fp} value={fp}>{fp}</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -410,17 +449,28 @@ export default function App() {
                     {EDUCATIONS.map(e => <option key={e} value={e}>{e}</option>)}
                   </select>
                 </div>
-                <div className="sm:col-span-3 flex justify-end mt-2">
-                  <button 
+                <div className="sm:col-span-2 lg:col-span-4 pt-2">
+                  <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       setFilterGender('Semua');
                       setFilterReligion('Semua');
                       setFilterEducation('Semua');
+                      setFilterFamilyPosition('Semua');
+                      setSearchTerm('');
                     }}
-                    className="text-xs font-bold text-slate-500 hover:text-indigo-400 transition-colors uppercase tracking-widest"
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-slate-950/50 hover:bg-slate-950 border border-white/5 hover:border-indigo-500/50 rounded-xl text-xs font-bold text-slate-400 hover:text-indigo-400 transition-all uppercase tracking-widest group shadow-sm hover:shadow-indigo-500/10"
                   >
-                    Reset Filter
-                  </button>
+                    <motion.div
+                      whileHover={{ rotate: -180 }}
+                      transition={{ duration: 0.5, ease: "easeInOut" }}
+                      className="flex items-center justify-center"
+                    >
+                      <RefreshCcw size={14} />
+                    </motion.div>
+                    Reset Semua Filter
+                  </motion.button>
                 </div>
               </div>
             </motion.div>
@@ -521,6 +571,13 @@ export default function App() {
         isOpen={isStatsOpen}
         onClose={() => setIsStatsOpen(false)}
         residents={residents}
+      />
+
+      <Toast 
+        isVisible={toast.isVisible}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isVisible: false }))}
       />
     </div>
   );

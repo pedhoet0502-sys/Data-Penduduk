@@ -51,7 +51,9 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className={`bg-slate-800/40 rounded-xl p-5 shadow-sm border transition-all cursor-pointer relative ${isInlineEditing ? 'border-indigo-500/50 ring-1 ring-indigo-500/20 shadow-indigo-500/5' : 'border-white/5 hover:border-white/20'}`}
+      whileHover={{ scale: 1.01, translateY: -2, transition: { duration: 0.2 } }}
+      whileTap={{ scale: 0.99, translateY: 0 }}
+      className={`bg-slate-800/40 rounded-xl p-5 shadow-sm border transition-all cursor-pointer relative ${isInlineEditing ? 'border-indigo-500/50 ring-1 ring-indigo-500/20 shadow-indigo-500/5' : 'border-white/5 hover:border-white/20 hover:shadow-xl hover:shadow-indigo-500/5'}`}
       id={`resident-card-${resident.id}`}
       onClick={() => !isInlineEditing && onViewDetail(resident)}
     >
@@ -182,9 +184,18 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-1 text-indigo-500 font-bold">
-            Detail <ChevronRight size={14} />
-          </div>
+          <motion.div 
+            whileHover={{ x: 3 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center gap-1 text-indigo-500 font-bold"
+          >
+            Detail <motion.span
+              animate={{ x: [0, 2, 0] }}
+              transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+            >
+              <ChevronRight size={14} />
+            </motion.span>
+          </motion.div>
         )}
       </div>
     </motion.div>
