@@ -14,7 +14,7 @@ import {
 } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Search, LogOut, LogIn, Database, Users, Fingerprint, RefreshCcw, CheckCircle2, Filter, SlidersHorizontal, ChevronDown, BarChart3, TrendingUp } from 'lucide-react';
+import { Plus, Search, LogOut, LogIn, Database, Users, User, Fingerprint, RefreshCcw, CheckCircle2, Filter, SlidersHorizontal, ChevronDown, BarChart3, TrendingUp, Mars, Venus } from 'lucide-react';
 import { db, auth } from './lib/firebase';
 import { Resident, Gender } from './types';
 import { RELIGIONS, EDUCATIONS, FAMILY_POSITIONS } from './lib/utils';
@@ -156,6 +156,8 @@ export default function App() {
       ...residentData,
     };
     if (!payload.occupation) payload.occupation = 'Belum/Tidak Bekerja';
+    if (!payload.bloodType) payload.bloodType = '-';
+    if (!payload.phone) payload.phone = '';
 
     try {
       if (isUpdate) {
@@ -203,6 +205,14 @@ export default function App() {
     setResidentIdToDelete(id);
     setIsConfirmOpen(true);
   };
+
+  const hasNewData = useMemo(() => {
+    return residents.some(r => {
+      const created = r.createdAt?.toDate();
+      if (!created) return false;
+      return (new Date().getTime() - created.getTime()) < 24 * 60 * 60 * 1000;
+    });
+  }, [residents]);
 
   const filteredResidents = useMemo(() => {
     return residents.filter(r => {
@@ -275,10 +285,13 @@ export default function App() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsStatsOpen(true)}
-            className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-all"
+            className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-all relative"
             title="Lihat Statistik"
           >
             <BarChart3 size={18} />
+            {hasNewData && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-pink-500 rounded-full border border-slate-900 animate-pulse shadow-[0_0_8px_rgba(236,72,153,0.5)]" />
+            )}
           </button>
           <button
             onClick={handleManualSync}
@@ -333,23 +346,60 @@ export default function App() {
           </div>
         )}
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-4 mb-8 cursor-pointer group" onClick={() => setIsStatsOpen(true)}>
-          <div className="bg-slate-900/40 p-4 rounded-3xl border border-white/10 shadow-sm group-hover:border-indigo-500/50 transition-all">
-            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-1 block">Total Warga</span>
-            <div className="flex items-end justify-between">
-              <span className="text-3xl font-black text-white">{residents.length}</span>
-              <BarChart3 size={16} className="text-slate-600 group-hover:text-indigo-400 mb-1" />
+        <div className="grid grid-cols-2 gap-3 mb-8 cursor-pointer group" onClick={() => setIsStatsOpen(true)}>
+          {/* Row 1: Total & New */}
+          <div className="bg-slate-900/40 p-4 rounded-3xl border border-white/10 shadow-sm group-hover:border-indigo-500/50 transition-all flex flex-col justify-between">
+            <span className="text-[9px] uppercase font-bold text-slate-500 tracking-widest block leading-none mb-2">Total Warga</span>
+            <div className="flex items-center justify-between">
+              <span className="text-2xl font-black text-white leading-none">{residents.length}</span>
+              <div className="w-8 h-8 bg-slate-950/30 rounded-lg flex items-center justify-center">
+                <Users size={14} className="text-slate-600 group-hover:text-indigo-400" />
+              </div>
             </div>
           </div>
-          <div className="bg-indigo-600 p-4 rounded-3xl shadow-lg shadow-indigo-600/20 text-white group-hover:bg-indigo-500 transition-all">
-            <span className="text-[10px] uppercase font-bold text-indigo-200 tracking-widest mb-1 block">Data Baru</span>
-            <div className="flex items-end justify-between">
-              <span className="text-3xl font-black">{residents.filter(r => {
+          
+          <div className="bg-indigo-600 p-4 rounded-3xl shadow-lg shadow-indigo-600/20 text-white group-hover:bg-indigo-500 transition-all flex flex-col justify-between">
+            <span className="text-[9px] uppercase font-bold text-indigo-200 tracking-widest block leading-none mb-2">Data Baru</span>
+            <div className="flex items-center justify-between">
+              <span className="text-2xl font-black leading-none">{residents.filter(r => {
                 const created = r.createdAt?.toDate ? r.createdAt.toDate() : (r.createdAt ? new Date(r.createdAt) : null);
                 if (!created) return false;
                 return (new Date().getTime() - created.getTime()) < 24 * 60 * 60 * 1000;
               }).length}</span>
-              <TrendingUp size={16} className="text-indigo-300 mb-1" />
+              <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
+                <TrendingUp size={14} className="text-indigo-100" />
+              </div>
+            </div>
+          </div>
+
+          {/* Row 2: Male & Female */}
+          <div className="bg-slate-900/60 p-4 rounded-3xl border border-white/10 shadow-sm group-hover:border-indigo-500/50 transition-all flex flex-col justify-center">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center border border-indigo-500/10">
+                <Mars size={18} className="text-indigo-400" strokeWidth={3} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase text-indigo-400/60 tracking-widest leading-none mb-1">Laki-laki</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-white leading-none tracking-tighter">{residents.filter(r => r.gender === Gender.MALE).length}</span>
+                  <span className="text-[10px] font-bold text-slate-500">{Math.round((residents.filter(r => r.gender === Gender.MALE).length / (residents.length || 1)) * 100)}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-900/60 p-4 rounded-3xl border border-white/10 shadow-sm group-hover:border-pink-500/50 transition-all flex flex-col justify-center">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-pink-500/10 rounded-xl flex items-center justify-center border border-pink-500/10">
+                <Venus size={18} className="text-pink-400" strokeWidth={3} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase text-pink-400/60 tracking-widest leading-none mb-1">Perempuan</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-white leading-none tracking-tighter">{residents.filter(r => r.gender === Gender.FEMALE).length}</span>
+                  <span className="text-[10px] font-bold text-slate-500">{Math.round((residents.filter(r => r.gender === Gender.FEMALE).length / (residents.length || 1)) * 100)}%</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -376,12 +426,18 @@ export default function App() {
           >
             <SlidersHorizontal size={20} />
             {(filterGender !== 'Semua' || filterReligion !== 'Semua' || filterEducation !== 'Semua' || filterFamilyPosition !== 'Semua') && (
-              <motion.span 
-                initial={{ opacity: 0.5, scale: 0.8 }}
-                animate={{ opacity: [0.5, 1, 0.5], scale: [0.8, 1.1, 0.8] }}
-                transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                className="w-2.5 h-2.5 rounded-full bg-emerald-400 absolute top-2.5 right-2.5 shadow-[0_0_8px_#10b981] ring-1 ring-emerald-500/50"
-              />
+              <div className="absolute top-3 right-3">
+                <motion.span 
+                  animate={{ opacity: [0.2, 0.5, 0.2], scale: [1, 2, 1] }}
+                  transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                  className="absolute inset-0 w-2 h-2 rounded-full bg-emerald-500 blur-[3px]"
+                />
+                <motion.span 
+                  animate={{ opacity: [0.8, 1, 0.8] }}
+                  transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                  className="relative block w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)] ring-1 ring-emerald-500/30"
+                />
+              </div>
             )}
           </button>
         </div>

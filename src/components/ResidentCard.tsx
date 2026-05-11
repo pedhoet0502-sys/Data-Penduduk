@@ -18,10 +18,12 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
   const [inlineFamilyPosition, setInlineFamilyPosition] = useState(resident.familyPosition);
   const [inlineMaritalStatus, setInlineMaritalStatus] = useState(resident.maritalStatus);
   const [isSaving, setIsSaving] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const handleQuickSave = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsSaving(true);
+    setShowConfirm(false);
     try {
       await onUpdate({
         ...resident,
@@ -38,8 +40,11 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
 
   const toggleInlineEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsInlineEditing(!isInlineEditing);
-    if (!isInlineEditing) {
+    if (isInlineEditing) {
+      setIsInlineEditing(false);
+      setShowConfirm(false);
+    } else {
+      setIsInlineEditing(true);
       setInlineFamilyPosition(resident.familyPosition);
       setInlineMaritalStatus(resident.maritalStatus);
     }
@@ -57,6 +62,36 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
       id={`resident-card-${resident.id}`}
       onClick={() => !isInlineEditing && onViewDetail(resident)}
     >
+      {/* Confirmation Overlay */}
+      {showConfirm && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="absolute inset-0 z-50 bg-slate-950/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center p-6 text-center"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="w-12 h-12 bg-amber-500/10 rounded-full flex items-center justify-center mb-3">
+            <RefreshCcw size={24} className="text-amber-500" />
+          </div>
+          <h4 className="text-white font-bold text-sm mb-1">Simpan Perubahan?</h4>
+          <p className="text-slate-400 text-[10px] mb-4">Apakah Anda yakin ingin memperbarui data {resident.fullName}?</p>
+          <div className="flex gap-2 w-full">
+            <button 
+              onClick={() => setShowConfirm(false)}
+              className="flex-1 py-2 rounded-lg bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-750 transition-colors"
+            >
+              Batal
+            </button>
+            <button 
+              onClick={handleQuickSave}
+              className="flex-1 py-2 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/20"
+            >
+              Ya, Simpan
+            </button>
+          </div>
+        </motion.div>
+      )}
+
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-indigo-600/20 rounded-xl flex items-center justify-center text-indigo-400 overflow-hidden">
@@ -175,7 +210,7 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
               <X size={12} /> Batal
             </button>
             <button
-              onClick={handleQuickSave}
+              onClick={(e) => { e.stopPropagation(); setShowConfirm(true); }}
               disabled={isSaving}
               className="p-1 px-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50 transition-colors flex items-center gap-1 font-bold"
             >

@@ -25,6 +25,7 @@ export const RELIGIONS = ['Islam', 'Kristen', 'Katolik', 'Hindu', 'Buddha', 'Kho
 export const EDUCATIONS = ['Tidak Sekolah', 'SD', 'SMP', 'SMA/SMK', 'Diploma', 'S1', 'S2', 'S3'];
 export const MARITAL_STATUSES = ['Belum Kawin', 'Kawin', 'Cerai Hidup', 'Cerai Mati', 'Duda', 'Janda'];
 export const FAMILY_POSITIONS = ['Kepala Keluarga', 'Istri', 'Anak', 'Mertua', 'Orang Tua', 'Cucu', 'Lainnya'];
+export const BLOOD_TYPES = ['-', 'A', 'B', 'AB', 'O'];
 
 export const OCCUPATIONS = [
   'Belum/Tidak Bekerja',

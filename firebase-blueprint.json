@@ -51,6 +51,14 @@
           "type": "string",
           "description": "Pekerjaan"
         },
+        "bloodType": {
+          "type": "string",
+          "description": "Golongan Darah"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Nomor Telepon"
+        },
         "photoUrl": {
           "type": "string",
           "description": "URL foto profil penduduk"

@@ -16,6 +16,8 @@ export interface Resident {
   maritalStatus: string;
   familyPosition: string;
   occupation: string;
+  bloodType: string;
+  phone: string;
   photoUrl?: string;
   ownerId: string;
   createdAt: any;

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, PieChart as PieIcon, BarChart3, TrendingUp, Users, Calendar, Briefcase, Database } from 'lucide-react';
+import { X, PieChart as PieIcon, BarChart3, TrendingUp, Users, User, Calendar, Briefcase, Database, Mars, Venus } from 'lucide-react';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, Cell as RechartsCell
@@ -198,36 +198,52 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
             animate="visible"
           >
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-              <motion.div variants={itemVariants} className="group bg-slate-800/40 p-6 rounded-3xl border border-white/5 flex items-center gap-5 hover:bg-slate-800/60 transition-all duration-300">
-                <div className="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform duration-300">
+            <div className="grid grid-cols-2 gap-4 mb-10">
+              {/* Row 1: Total & Avg Age */}
+              <motion.div variants={itemVariants} className="group bg-slate-800/40 p-5 rounded-3xl border border-white/5 flex items-center gap-5 hover:bg-slate-800/60 transition-all duration-300">
+                <div className="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-500/10 group-hover:scale-110 transition-transform duration-300">
                   <Users size={28} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Total Penduduk</p>
-                  <p className="text-3xl font-black text-white">{stats.total}</p>
+                  <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest leading-tight mb-1">Total Penduduk</p>
+                  <p className="text-3xl font-black text-white tracking-tighter">{stats.total} <span className="text-xs font-normal text-slate-500 ml-1">Jiwa</span></p>
                 </div>
               </motion.div>
-              
-              <motion.div variants={itemVariants} className="group bg-slate-800/40 p-6 rounded-3xl border border-white/5 flex items-center gap-5 hover:bg-slate-800/60 transition-all duration-300">
-                <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform duration-300">
+
+              <motion.div variants={itemVariants} className="group bg-slate-800/40 p-5 rounded-3xl border border-white/5 flex items-center gap-5 hover:bg-slate-800/60 transition-all duration-300">
+                <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-500/10 group-hover:scale-110 transition-transform duration-300">
                   <TrendingUp size={28} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Rata-rata Usia</p>
-                  <p className="text-3xl font-black text-white">{stats.avgAge} <span className="text-xs font-normal text-slate-500">Tahun</span></p>
+                  <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest leading-tight mb-1">Rata-rata Usia</p>
+                  <p className="text-3xl font-black text-white tracking-tighter">{stats.avgAge} <span className="text-xs font-normal text-slate-500 ml-1">Thn</span></p>
                 </div>
               </motion.div>
- 
-              <motion.div variants={itemVariants} className="group bg-slate-800/40 p-6 rounded-3xl border border-white/5 flex items-center gap-5 hover:bg-slate-800/60 transition-all duration-300">
-                <div className="w-14 h-14 bg-pink-500/10 rounded-2xl flex items-center justify-center text-pink-400 group-hover:scale-110 transition-transform duration-300">
-                  <Calendar size={28} />
+              
+              {/* Row 2: Male & Female */}
+              <motion.div variants={itemVariants} className="group bg-slate-900/40 p-5 rounded-3xl border border-indigo-500/10 flex items-center gap-5 hover:bg-slate-900/60 transition-all duration-300">
+                <div className="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-500/10 group-hover:scale-110 transition-transform duration-300">
+                  <Mars size={28} strokeWidth={2.5} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Kategori Terbanyak</p>
-                  <p className="text-xl font-black text-white line-clamp-1">
-                    {stats.ageData.length > 0 ? stats.ageData.reduce((prev, current) => (prev.value > current.value) ? prev : current).name : '-'}
-                  </p>
+                  <p className="text-[10px] font-black uppercase text-indigo-400 tracking-widest leading-tight mb-1">Laki-laki</p>
+                  <div className="flex items-baseline gap-3">
+                    <p className="text-3xl font-black text-white tracking-tighter">{stats.genderData[0].value}</p>
+                    <span className="text-xs font-black text-slate-500 bg-white/5 px-2 py-0.5 rounded-full">{Math.round((stats.genderData[0].value / (stats.total || 1)) * 100)}%</span>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div variants={itemVariants} className="group bg-slate-900/40 p-5 rounded-3xl border border-pink-500/10 flex items-center gap-5 hover:bg-slate-900/60 transition-all duration-300">
+                <div className="w-14 h-14 bg-pink-500/10 rounded-2xl flex items-center justify-center text-pink-400 border border-pink-500/10 group-hover:scale-110 transition-transform duration-300">
+                  <Venus size={28} strokeWidth={2.5} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-pink-400 tracking-widest leading-tight mb-1">Perempuan</p>
+                  <div className="flex items-baseline gap-3">
+                    <p className="text-3xl font-black text-white tracking-tighter">{stats.genderData[1].value}</p>
+                    <span className="text-xs font-black text-slate-500 bg-white/5 px-2 py-0.5 rounded-full">{Math.round((stats.genderData[1].value / (stats.total || 1)) * 100)}%</span>
+                  </div>
                 </div>
               </motion.div>
             </div>
@@ -495,6 +511,55 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
                 <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                   <PieIcon size={18} className="text-indigo-400" /> Distribusi Gender
                 </h3>
+                
+                <div className="grid grid-cols-1 gap-6 mb-6">
+                  <div className="bg-slate-950/40 border border-white/10 p-5 rounded-[2.5rem] shadow-2xl relative overflow-hidden group/stats">
+                    <div className="flex flex-col gap-4 relative z-10">
+                      {/* Laki-laki Large Row */}
+                      <div className="flex items-center justify-between bg-slate-900/60 p-5 rounded-3xl border border-white/5 group/row hover:bg-slate-900/80 transition-colors">
+                        <div className="flex items-center gap-6">
+                          <div className="w-16 h-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center border border-indigo-500/20 shadow-xl group-hover/row:scale-110 transition-transform">
+                            <Mars size={32} className="text-indigo-400" strokeWidth={2.5} />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-3 mb-1">
+                              <p className="text-xs font-black uppercase text-indigo-400 tracking-[0.2em] leading-none">Laki-laki</p>
+                              <span className="text-[10px] font-black text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
+                                {Math.round((stats.genderData.find(g => g.name === 'Laki-laki')?.value || 0) / (stats.total || 1) * 100)}%
+                              </span>
+                            </div>
+                            <p className="text-5xl font-black text-white leading-none tracking-tighter">
+                              {stats.genderData.find(g => g.name === 'Laki-laki')?.value || 0}
+                              <span className="text-sm font-bold text-slate-500 ml-2 uppercase tracking-widest">Jiwa</span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Perempuan Large Row */}
+                      <div className="flex items-center justify-between bg-slate-900/60 p-5 rounded-3xl border border-white/5 group/row hover:bg-slate-900/80 transition-colors">
+                        <div className="flex items-center gap-6">
+                          <div className="w-16 h-16 bg-pink-500/10 rounded-2xl flex items-center justify-center border border-pink-500/20 shadow-xl group-hover/row:scale-110 transition-transform">
+                            <Venus size={32} className="text-pink-400" strokeWidth={2.5} />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-3 mb-1">
+                              <p className="text-xs font-black uppercase text-pink-400 tracking-[0.2em] leading-none">Perempuan</p>
+                              <span className="text-[10px] font-black text-pink-300 bg-pink-500/10 px-2 py-0.5 rounded-full border border-pink-500/20">
+                                {Math.round((stats.genderData.find(g => g.name === 'Perempuan')?.value || 0) / (stats.total || 1) * 100)}%
+                              </span>
+                            </div>
+                            <p className="text-5xl font-black text-white leading-none tracking-tighter">
+                              {stats.genderData.find(g => g.name === 'Perempuan')?.value || 0}
+                              <span className="text-sm font-bold text-slate-500 ml-2 uppercase tracking-widest">Jiwa</span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>

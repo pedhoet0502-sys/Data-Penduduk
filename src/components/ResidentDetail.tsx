@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, CreditCard, MapPin, Calendar, Scroll, Heart, Users, Briefcase, RefreshCcw, CheckCircle2, GraduationCap } from 'lucide-react';
+import { X, User, CreditCard, MapPin, Calendar, Scroll, Heart, Users, Briefcase, RefreshCcw, CheckCircle2, GraduationCap, Droplets, Phone } from 'lucide-react';
 import { Resident } from '../types';
 import { calculateAge } from '../lib/utils';
 import { format } from 'date-fns';
@@ -70,6 +70,8 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
               <DetailItem icon={GraduationCap} label="Pendidikan" value={resident.education} color="text-rose-400" />
               <DetailItem icon={Briefcase} label="Pekerjaan" value={resident.occupation} color="text-cyan-400" truncate={true} />
               <DetailItem icon={Heart} label="Status Perkawinan" value={resident.maritalStatus} color="text-pink-400" />
+              <DetailItem icon={Droplets} label="Gol. Darah" value={resident.bloodType} color="text-rose-600" />
+              <DetailItem icon={Phone} label="Nomor Telepon" value={resident.phone} color="text-emerald-500" />
             </div>
             
             <div className={`mt-8 overflow-hidden rounded-2xl border transition-all duration-500 ${resident.updatedAt ? 'bg-emerald-500/5 border-emerald-500/20 shadow-lg shadow-emerald-500/5' : 'bg-amber-500/5 border-amber-500/20 shadow-lg shadow-amber-500/5 pulse-amber'}`}>

@@ -15,10 +15,10 @@ service cloud.firestore {
 
     // Resident Validation
     function isValidResident(data) {
-      let requiredFields = ['kkNumber', 'fullName', 'nik', 'gender', 'birthPlace', 'birthDate', 'religion', 'education', 'maritalStatus', 'familyPosition', 'occupation', 'ownerId', 'createdAt', 'updatedAt'];
+      let requiredFields = ['kkNumber', 'fullName', 'nik', 'gender', 'birthPlace', 'birthDate', 'religion', 'education', 'maritalStatus', 'familyPosition', 'occupation', 'bloodType', 'phone', 'ownerId', 'createdAt', 'updatedAt'];
       return data.keys().hasAll(requiredFields)
         // Allow slightly more keys to be future-proof and handle optional photoUrl
-        && data.keys().size() >= 14 && data.keys().size() <= 16
+        && data.keys().size() >= 16 && data.keys().size() <= 18
         && data.kkNumber is string && data.kkNumber.size() == 16
         && data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 200
         && data.nik is string && data.nik.size() == 16
@@ -30,6 +30,8 @@ service cloud.firestore {
         && data.maritalStatus is string
         && data.familyPosition is string
         && data.occupation is string
+        && data.bloodType is string
+        && data.phone is string && data.phone.size() <= 20
         && (!data.keys().hasAny(['photoUrl']) || (data.photoUrl is string && data.photoUrl.size() <= 2048))
         && data.ownerId == request.auth.uid
         && data.createdAt is timestamp

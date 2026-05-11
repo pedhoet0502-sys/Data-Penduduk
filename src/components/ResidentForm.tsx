@@ -6,7 +6,7 @@ import { id } from 'date-fns/locale';
 import { format, parseISO, isValid } from 'date-fns';
 import "react-datepicker/dist/react-datepicker.css";
 import { Gender, Resident } from '../types';
-import { RELIGIONS, EDUCATIONS, MARITAL_STATUSES, FAMILY_POSITIONS, OCCUPATIONS, calculateAge } from '../lib/utils';
+import { RELIGIONS, EDUCATIONS, MARITAL_STATUSES, FAMILY_POSITIONS, OCCUPATIONS, BLOOD_TYPES, calculateAge } from '../lib/utils';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../lib/firebase';
 
@@ -45,6 +45,8 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
     maritalStatus: MARITAL_STATUSES[0],
     familyPosition: FAMILY_POSITIONS[0],
     occupation: OCCUPATIONS[0],
+    bloodType: '-',
+    phone: '',
     photoUrl: '',
   });
 
@@ -55,7 +57,22 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
 
   useEffect(() => {
     if (initialData) {
-      setFormData(initialData);
+      setFormData({
+        kkNumber: initialData.kkNumber || '',
+        fullName: initialData.fullName || '',
+        nik: initialData.nik || '',
+        gender: initialData.gender || Gender.MALE,
+        birthPlace: initialData.birthPlace || '',
+        birthDate: initialData.birthDate || '',
+        religion: initialData.religion || RELIGIONS[0],
+        education: initialData.education || EDUCATIONS[3],
+        maritalStatus: initialData.maritalStatus || MARITAL_STATUSES[0],
+        familyPosition: initialData.familyPosition || FAMILY_POSITIONS[0],
+        occupation: initialData.occupation || OCCUPATIONS[0],
+        bloodType: initialData.bloodType || '-',
+        phone: initialData.phone || '',
+        photoUrl: initialData.photoUrl || '',
+      });
       setPreviewUrl(initialData.photoUrl || null);
     } else {
       setFormData({
@@ -70,6 +87,8 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
         maritalStatus: MARITAL_STATUSES[0],
         familyPosition: FAMILY_POSITIONS[0],
         occupation: OCCUPATIONS[0],
+        bloodType: '-',
+        phone: '',
         photoUrl: '',
       });
       setPreviewUrl(null);
@@ -152,6 +171,10 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
       setError('Pilih Pekerjaan');
       return;
     }
+    if (formData.phone && !/^\d+$/.test(formData.phone)) {
+      setError('Nomor Telepon harus berupa angka');
+      return;
+    }
 
     setError(null);
     onSubmit(formData);
@@ -231,58 +254,58 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-x-8 gap-y-6">
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">Nomor KK</label>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Nomor KK</label>
                 <input
                   type="text"
                   name="kkNumber"
                   value={formData.kkNumber}
                   onChange={handleInputChange}
                   maxLength={16}
-                  placeholder="16 digit"
-                  className="w-full bg-slate-950/50 border border-white/10 rounded-lg p-3 text-sm focus:border-indigo-500 outline-none text-white transition-all"
+                  placeholder="16 digit nomor KK"
+                  className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-3 text-sm focus:border-indigo-500/50 focus:bg-slate-950/60 outline-none text-white transition-all shadow-inner"
                   id="input-kk"
                   required
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">NIK</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">NIK</label>
                 <input
                   type="text"
                   name="nik"
                   value={formData.nik}
                   onChange={handleInputChange}
                   maxLength={16}
-                  placeholder="16 digit"
-                  className="w-full bg-slate-950/50 border border-white/10 rounded-lg p-3 text-sm focus:border-indigo-500 outline-none text-white transition-all"
+                  placeholder="16 digit NIK"
+                  className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-3 text-sm focus:border-indigo-500/50 focus:bg-slate-950/60 outline-none text-white transition-all shadow-inner"
                   id="input-nik"
                   required
                 />
               </div>
 
-              <div className="space-y-1 col-span-2">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">Nama Lengkap</label>
+              <div className="space-y-1.5 col-span-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Nama Lengkap</label>
                 <input
                   type="text"
                   name="fullName"
                   value={formData.fullName}
                   onChange={handleInputChange}
-                  placeholder="Sesuai KTP"
-                  className="w-full bg-slate-950/50 border border-white/10 rounded-lg p-3 text-sm focus:border-indigo-500 outline-none text-white transition-all"
+                  placeholder="Nama Lengkap sesuai KTP"
+                  className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-3 text-sm focus:border-indigo-500/50 focus:bg-slate-950/60 outline-none text-white transition-all shadow-inner"
                   id="input-name"
                   required
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">Jenis Kelamin</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Jenis Kelamin</label>
                 <select
                   name="gender"
                   value={formData.gender}
                   onChange={handleInputChange}
-                  className="w-full bg-slate-950/50 border border-white/10 rounded-lg p-3 text-sm text-white focus:border-indigo-500 outline-none"
+                  className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-3 text-sm text-white focus:border-indigo-500/50 outline-none appearance-none cursor-pointer"
                   id="select-gender"
                 >
                   <option value={Gender.MALE}>Laki-laki</option>
@@ -290,116 +313,138 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
                 </select>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">Agama</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Agama</label>
                 <select
                   name="religion"
                   value={formData.religion}
                   onChange={handleInputChange}
-                  className="w-full bg-slate-950/50 border border-white/10 rounded-lg p-3 text-sm text-white focus:border-indigo-500 outline-none"
+                  className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-3 text-sm text-white focus:border-indigo-500/50 outline-none cursor-pointer"
                   id="select-religion"
                 >
                   {RELIGIONS.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 col-span-2">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">Tempat Lahir</label>
-                  <input
-                    type="text"
-                    name="birthPlace"
-                    value={formData.birthPlace}
-                    onChange={handleInputChange}
-                    placeholder="Kota/Kab"
-                    className="w-full bg-slate-950/50 border border-white/10 rounded-lg p-3 text-sm text-white outline-none"
-                    id="input-birthplace"
-                  />
-                </div>
-                <div className="space-y-1 relative">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">Tanggal Lahir</label>
-                  <div className="relative group">
-                    <DatePicker
-                      selected={formData.birthDate ? parseISO(formData.birthDate) : null}
-                      onChange={(date: Date | null) => {
-                        if (date && isValid(date)) {
-                          setFormData(prev => ({ ...prev, birthDate: format(date, 'yyyy-MM-dd') }));
-                        }
-                      }}
-                      dateFormat="dd/MM/yyyy"
-                      placeholderText="Pilih Tanggal"
-                      locale="id"
-                      showMonthDropdown
-                      showYearDropdown
-                      dropdownMode="select"
-                      maxDate={new Date()}
-                      className="w-full bg-slate-950/50 border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-indigo-500 transition-all cursor-pointer"
-                      id="input-birthdate"
-                      autoComplete="off"
-                      customInput={
-                        <CustomDatePickerInput />
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Tempat Lahir</label>
+                <input
+                  type="text"
+                  name="birthPlace"
+                  value={formData.birthPlace}
+                  onChange={handleInputChange}
+                  placeholder="Kota/Kabupaten"
+                  className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500/50 transition-all font-medium"
+                  id="input-birthplace"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Tanggal Lahir</label>
+                <div className="relative group">
+                  <DatePicker
+                    selected={formData.birthDate ? parseISO(formData.birthDate) : null}
+                    onChange={(date: Date | null) => {
+                      if (date && isValid(date)) {
+                        setFormData(prev => ({ ...prev, birthDate: format(date, 'yyyy-MM-dd') }));
                       }
-                    />
-                  </div>
+                    }}
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="Pilih Tanggal"
+                    locale="id"
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
+                    maxDate={new Date()}
+                    className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500/50 transition-all cursor-pointer"
+                    id="input-birthdate"
+                    autoComplete="off"
+                    customInput={
+                      <CustomDatePickerInput />
+                    }
+                  />
+                  {formData.birthDate && (
+                    <div className="absolute -top-6 right-0">
+                      <span className="text-[9px] font-black bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-500/20 uppercase tracking-tighter">
+                        {calculateAge(formData.birthDate)} Thn
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">Pendidikan</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Pendidikan</label>
                 <select
                   name="education"
                   value={formData.education}
                   onChange={handleInputChange}
-                  className="w-full bg-slate-950/50 border border-white/10 rounded-lg p-3 text-sm text-white outline-none"
+                  className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500/50 cursor-pointer"
                   id="select-education"
                 >
                   {EDUCATIONS.map(e => <option key={e} value={e}>{e}</option>)}
                 </select>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">Usia</label>
-                <input
-                  type="text"
-                  value={formData.birthDate ? `${calculateAge(formData.birthDate)} Tahun` : '-'}
-                  disabled
-                  className="w-full bg-slate-800/50 border border-white/5 rounded-lg p-3 text-sm text-indigo-400 font-bold"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">Status Kawin</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Status Kawin</label>
                 <select
                   name="maritalStatus"
                   value={formData.maritalStatus}
                   onChange={handleInputChange}
-                  className="w-full bg-slate-950/50 border border-white/10 rounded-lg p-3 text-sm text-white outline-none"
+                  className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500/50 cursor-pointer"
                   id="select-marital"
                 >
                   {MARITAL_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">Hub. Keluarga</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Hubungan Keluarga</label>
                 <select
                   name="familyPosition"
                   value={formData.familyPosition}
                   onChange={handleInputChange}
-                  className="w-full bg-slate-950/50 border border-white/10 rounded-lg p-3 text-sm text-white outline-none"
+                  className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500/50 cursor-pointer"
                   id="select-family"
                 >
                   {FAMILY_POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
 
-              <div className="space-y-1 col-span-2">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">Pekerjaan</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Gol. Darah</label>
+                <select
+                  name="bloodType"
+                  value={formData.bloodType}
+                  onChange={handleInputChange}
+                  className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500/50 cursor-pointer"
+                  id="select-bloodtype"
+                >
+                  {BLOOD_TYPES.map(bt => <option key={bt} value={bt}>{bt}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-1.5 col-span-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Nomor Telepon / WhatsApp</label>
+                <input
+                  type="text"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  placeholder="Contoh: 081234567890"
+                  className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-3 text-sm focus:border-indigo-500/50 outline-none text-white transition-all shadow-inner"
+                  id="input-phone"
+                />
+              </div>
+
+              <div className="space-y-1.5 col-span-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Pekerjaan</label>
                 <select
                   name="occupation"
                   value={formData.occupation}
                   onChange={handleInputChange}
-                  className="w-full bg-slate-950/50 border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500/50 cursor-pointer"
                   id="select-occupation"
                   required
                 >
