@@ -50,12 +50,12 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
     const occupationDist: Record<string, number> = {};
     const familyPositionDist: Record<string, number> = {};
     const productiveDist = { 'Belum Produktif (0-14)': 0, 'Produktif (15-64)': 0, 'Tidak Produktif (>64)': 0 };
-    const categoryDist: Record<string, number> = {
-      'Balita': 0,
-      'Anak-anak': 0,
-      'Remaja': 0,
-      'Dewasa': 0,
-      'Lansia': 0
+    const categoryDist: Record<string, { total: number; male: number; female: number }> = {
+      'Balita': { total: 0, male: 0, female: 0 },
+      'Anak-anak': { total: 0, male: 0, female: 0 },
+      'Remaja': { total: 0, male: 0, female: 0 },
+      'Dewasa': { total: 0, male: 0, female: 0 },
+      'Lansia': { total: 0, male: 0, female: 0 }
     };
     let totalAge = 0;
     let minAge = Infinity;
@@ -63,8 +63,8 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
 
     // Pre-initialize standard 5-year categories for a proper pyramid shape
     const PYRAMID_CATEGORIES = [
-      '0-4', '5-9', '10-14', '15-19', '20-24', '25-29', '30-34', '35-39', 
-      '40-44', '45-49', '50-54', '55-59', '60-64', '65-69', '70+'
+      '70+', '65-69', '60-64', '55-59', '50-54', '45-49', '40-44', '35-39', 
+      '30-34', '25-29', '20-24', '15-19', '10-14', '5-9', '0-4'
     ];
     
     PYRAMID_CATEGORIES.forEach(cat => {
@@ -75,11 +75,19 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
       const age = calculateAge(r.birthDate);
       
       // Categorical groups for the categories chart
-      if (age <= 5) categoryDist['Balita']++;
-      else if (age <= 12) categoryDist['Anak-anak']++;
-      else if (age <= 17) categoryDist['Remaja']++;
-      else if (age <= 59) categoryDist['Dewasa']++;
-      else categoryDist['Lansia']++;
+      let catName = '';
+      if (age <= 5) catName = 'Balita';
+      else if (age <= 12) catName = 'Anak-anak';
+      else if (age <= 17) catName = 'Remaja';
+      else if (age <= 59) catName = 'Dewasa';
+      else catName = 'Lansia';
+      
+      categoryDist[catName].total++;
+      if (r.gender === 'Laki-laki') {
+        categoryDist[catName].male++;
+      } else {
+        categoryDist[catName].female++;
+      }
       
       // Determine pyramid category
       let pyramidCat = '';
@@ -134,7 +142,12 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
 
     const productiveData = Object.entries(productiveDist).map(([name, value]) => ({ name, value }));
 
-    const categoryData = Object.entries(categoryDist).map(([name, value]) => ({ name, value }));
+    const categoryData = Object.entries(categoryDist).map(([name, data]) => ({ 
+      name, 
+      value: data.total,
+      male: data.male,
+      female: data.female
+    }));
 
     const genderData = [
       { name: 'Laki-laki', value: genderDist['Laki-laki'] },
@@ -201,6 +214,98 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
             initial="hidden"
             animate="visible"
           >
+            {/* Informative Demographic Summary */}
+            <motion.div variants={itemVariants} className="mb-10">
+              <div className="bg-slate-950/40 border border-white/5 rounded-[2.5rem] p-8 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <Database size={120} className="text-indigo-500" />
+                </div>
+                
+                <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3">
+                  <div className="w-2 h-8 bg-indigo-500 rounded-full" />
+                  Ikhtisar Demografi
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+                  <div className="space-y-6">
+                    <div>
+                      <h4 className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.2em] mb-3">Statistik Utama</h4>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                          <span className="text-sm text-slate-400">Total Penduduk Terdaftar</span>
+                          <span className="text-xl font-black text-white">{stats.total} <span className="text-[10px] font-normal text-slate-500">Jiwa</span></span>
+                        </div>
+                        <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                          <span className="text-sm text-slate-400">Total Kepala Keluarga</span>
+                          <span className="text-xl font-black text-white">{stats.headOfFamilyCount} <span className="text-[10px] font-normal text-slate-500">KK</span></span>
+                        </div>
+                        <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                          <span className="text-sm text-slate-400">Rasio Jenis Kelamin (L:P)</span>
+                          <span className="text-xl font-black text-white">{stats.genderData[0].value}:{stats.genderData[1].value}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-[10px] font-black uppercase text-pink-400 tracking-[0.2em] mb-3">Distribusi Gender</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-slate-900/60 p-4 rounded-2xl border border-indigo-500/10">
+                          <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Laki-laki</p>
+                          <p className="text-2xl font-black text-white">{stats.genderData[0].value}</p>
+                          <p className="text-[10px] text-slate-500">{Math.round((stats.genderData[0].value / (stats.total || 1)) * 100)}% dari total</p>
+                        </div>
+                        <div className="bg-slate-900/60 p-4 rounded-2xl border border-pink-500/10">
+                          <p className="text-[9px] font-bold text-pink-400 uppercase tracking-widest mb-1">Perempuan</p>
+                          <p className="text-2xl font-black text-white">{stats.genderData[1].value}</p>
+                          <p className="text-[10px] text-slate-500">{Math.round((stats.genderData[1].value / (stats.total || 1)) * 100)}% dari total</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-[10px] font-black uppercase text-amber-400 tracking-[0.2em] mb-3">Kategori Usia (Regulasi ID)</h4>
+                    <div className="space-y-2">
+                      {stats.categoryData.map((cat, idx) => (
+                        <div key={idx} className="bg-slate-900/40 p-3 rounded-xl border border-white/5 flex items-center justify-between hover:bg-slate-900/60 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="w-1.5 h-6 rounded-full" style={{ backgroundColor: ['#60a5fa', '#fbbf24', '#f472b6', '#818cf8', '#34d399'][idx % 5] }} />
+                            <div>
+                              <p className="text-sm font-bold text-slate-200">{cat.name}</p>
+                              <p className="text-[9px] text-slate-500 uppercase tracking-tighter">
+                                {cat.name === 'Balita' && '0 - 5 Tahun'}
+                                {cat.name === 'Anak-anak' && '6 - 12 Tahun'}
+                                {cat.name === 'Remaja' && '13 - 17 Tahun'}
+                                {cat.name === 'Dewasa' && '18 - 59 Tahun'}
+                                {cat.name === 'Lansia' && '60+ Tahun'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-black text-white leading-none">{cat.value}</p>
+                            <div className="flex items-center gap-2 justify-end mt-1">
+                              <span className="text-[8px] font-bold text-indigo-400 bg-indigo-500/10 px-1 rounded flex items-center gap-0.5">
+                                <Mars size={8} /> {cat.male}
+                              </span>
+                              <span className="text-[8px] font-bold text-pink-400 bg-pink-500/10 px-1 rounded flex items-center gap-0.5">
+                                <Venus size={8} /> {cat.female}
+                              </span>
+                            </div>
+                            <p className="text-[9px] font-bold text-slate-600 uppercase tracking-tighter mt-1">{Math.round((cat.value / (stats.total || 1)) * 100)}%</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 p-4 bg-indigo-500/5 rounded-2xl border border-indigo-500/10">
+                      <p className="text-[10px] text-indigo-300 leading-relaxed italic">
+                        * Klasifikasi merujuk pada standar kategorisasi penduduk Indonesia (BPS & Kemenkes).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
               {/* Row 1: Total, KK, & Avg Age */}
@@ -411,7 +516,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
                       >
                         <XAxis 
                           type="number" 
-                          domain={[0, stats.pyramidMax]} 
+                          domain={[0, Math.ceil(stats.pyramidMax * 1.1)]} 
                           reversed 
                           hide
                         />
@@ -430,13 +535,12 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
                             boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
                           }}
                           formatter={(value: number) => [Math.abs(value), 'Laki-laki']}
-                          labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
                         />
                         <Bar 
                           dataKey="male" 
                           fill="#6366f1" 
                           radius={[4, 0, 0, 4]} 
-                          barSize={24}
+                          barSize={16}
                           animationDuration={1500}
                         >
                           {stats.pyramidData.map((entry, index) => (
@@ -468,7 +572,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
                       >
                         <XAxis 
                           type="number" 
-                          domain={[0, stats.pyramidMax]} 
+                          domain={[0, Math.ceil(stats.pyramidMax * 1.1)]} 
                           hide
                         />
                         <YAxis 
@@ -486,13 +590,12 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
                             boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
                           }}
                           formatter={(value: number) => [value, 'Perempuan']}
-                          labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
                         />
                         <Bar 
                           dataKey="female" 
                           fill="#ec4899" 
                           radius={[0, 4, 4, 0]} 
-                          barSize={24}
+                          barSize={16}
                           animationDuration={1500}
                         >
                           {stats.pyramidData.map((entry, index) => (

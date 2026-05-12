@@ -4,6 +4,7 @@ import { X, Save, AlertCircle, Camera, Upload, Loader2, Image as ImageIcon, Cale
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { id } from 'date-fns/locale';
 import { format, parseISO, isValid } from 'date-fns';
+import imageCompression from 'browser-image-compression';
 import "react-datepicker/dist/react-datepicker.css";
 import { Gender, Resident, ResidenceStatus, ResidentStatus, MutationType } from '../types';
 import { RELIGIONS, EDUCATIONS, MARITAL_STATUSES, FAMILY_POSITIONS, OCCUPATIONS, BLOOD_TYPES, RESIDENCE_STATUSES, calculateAge } from '../lib/utils';
@@ -115,8 +116,9 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      setError('Ukuran foto maksimal 2MB');
+    // Check if it's an image
+    if (!file.type.startsWith('image/')) {
+      setError('File harus berupa gambar (JPG, PNG, atau WEBP)');
       return;
     }
 
@@ -124,15 +126,50 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
     setError(null);
 
     try {
-      const storageRef = ref(storage, `residents/${Date.now()}_${file.name}`);
-      const snapshot = await uploadBytes(storageRef, file);
+      // Image compression options
+      const options = {
+        maxSizeMB: 0.5, // Target 500KB for much faster upload
+        maxWidthOrHeight: 1024, // Reasonable size for profile pic
+        useWebWorker: true,
+        initialQuality: 0.8
+      };
+
+      console.log(`Original size: ${file.size / 1024 / 1024} MB`);
+      
+      let uploadFile: File | Blob = file;
+      
+      // Only compress if the file is larger than 200KB or if we want to ensure consistent size
+      try {
+        const compressedFile = await imageCompression(file, options);
+        console.log(`Compressed size: ${compressedFile.size / 1024 / 1024} MB`);
+        uploadFile = compressedFile;
+      } catch (compressionErr) {
+        console.error('Compression failed, uploading original:', compressionErr);
+        // If compression fails for some reason, we'll try uploading the original if it's under 2MB
+        if (file.size > 2 * 1024 * 1024) {
+          throw new Error('Gambar terlalu besar dan gagal dikompresi (Maks 2MB)');
+        }
+      }
+
+      const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const storageRef = ref(storage, `residents/${Date.now()}_${safeFileName}`);
+      const snapshot = await uploadBytes(storageRef, uploadFile);
       const url = await getDownloadURL(snapshot.ref);
       
       setFormData(prev => ({ ...prev, photoUrl: url }));
       setPreviewUrl(url);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error uploading photo:', err);
-      setError('Gagal mengunggah foto. Silakan coba lagi.');
+      // Give more specific error messages if possible
+      if (err.code === 'storage/unauthorized') {
+        setError('Gagal: Izin ditolak. Anda harus masuk untuk mengunggah.');
+      } else if (err.code === 'storage/quota-exceeded') {
+        setError('Gagal: Kuota penyimpanan habis.');
+      } else if (err.code === 'storage/retry-limit-exceeded') {
+        setError('Gagal: Waktu unggah habis. Periksa koneksi Anda.');
+      } else {
+        setError(`Gagal mengunggah foto: ${err.message || 'Silakan coba lagi.'}`);
+      }
     } finally {
       setIsUploading(false);
     }

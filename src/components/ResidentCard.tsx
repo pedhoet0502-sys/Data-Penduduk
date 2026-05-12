@@ -97,8 +97,12 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
 
       <div className="flex justify-between items-start mb-3">
         <div className="flex items-center gap-3">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white overflow-hidden shadow-lg border border-white/10 ${getColorFromName(resident.fullName)}`}>
-            <span className="text-base font-black tracking-tight">{getInitials(resident.fullName)}</span>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white overflow-hidden shadow-lg border border-white/10 ${resident.photoUrl ? 'bg-slate-800' : getColorFromName(resident.fullName)}`}>
+            {resident.photoUrl ? (
+              <img src={resident.photoUrl} alt={resident.fullName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              <span className="text-base font-black tracking-tight">{getInitials(resident.fullName)}</span>
+            )}
           </div>
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
