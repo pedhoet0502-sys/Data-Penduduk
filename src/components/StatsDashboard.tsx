@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, PieChart as PieIcon, BarChart3, TrendingUp, Users, User, Calendar, Briefcase, Database, Mars, Venus } from 'lucide-react';
+import { X, PieChart as PieIcon, BarChart3, TrendingUp, Users, User, Calendar, Briefcase, Database, Mars, Venus, Fingerprint } from 'lucide-react';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, Cell as RechartsCell
@@ -48,6 +48,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
     const pyramidGroups: Record<string, { male: number; female: number }> = {};
     const genderDist: Record<string, number> = { 'Laki-laki': 0, 'Perempuan': 0 };
     const occupationDist: Record<string, number> = {};
+    const familyPositionDist: Record<string, number> = {};
     const productiveDist = { 'Belum Produktif (0-14)': 0, 'Produktif (15-64)': 0, 'Tidak Produktif (>64)': 0 };
     const categoryDist: Record<string, number> = {
       'Balita': 0,
@@ -109,6 +110,9 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
 
       const occ = r.occupation || 'Tidak Ada Data';
       occupationDist[occ] = (occupationDist[occ] || 0) + 1;
+
+      const pos = r.familyPosition || 'Lainnya';
+      familyPositionDist[pos] = (familyPositionDist[pos] || 0) + 1;
       
       totalAge += age;
       if (age < minAge) minAge = age;
@@ -141,7 +145,6 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 8); // Show top 8 for space
-
     return {
       ageData,
       pyramidData,
@@ -150,6 +153,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
       occupationData,
       productiveData,
       categoryData,
+      headOfFamilyCount: familyPositionDist['Kepala Keluarga'] || 0,
       minAge: residents.length > 0 ? minAge : 0,
       maxAge: residents.length > 0 ? maxAge : 0,
       avgAge: residents.length > 0 ? (totalAge / residents.length).toFixed(1) : 0,
@@ -198,11 +202,11 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
             animate="visible"
           >
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
-              {/* Row 1: Total & Avg Age */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+              {/* Row 1: Total, KK, & Avg Age */}
               <motion.div variants={itemVariants} className="group bg-slate-800/40 p-5 rounded-3xl border border-white/5 flex items-center gap-5 hover:bg-slate-800/60 transition-all duration-300">
                 <div className="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-500/10 group-hover:scale-110 transition-transform duration-300">
-                  <Users size={28} />
+                   <Users size={28} />
                 </div>
                 <div>
                   <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest leading-tight mb-1">Total Penduduk</p>
@@ -212,6 +216,16 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
 
               <motion.div variants={itemVariants} className="group bg-slate-800/40 p-5 rounded-3xl border border-white/5 flex items-center gap-5 hover:bg-slate-800/60 transition-all duration-300">
                 <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-500/10 group-hover:scale-110 transition-transform duration-300">
+                  <Fingerprint size={28} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest leading-tight mb-1">Total Keluarga</p>
+                  <p className="text-3xl font-black text-white tracking-tighter">{stats.headOfFamilyCount} <span className="text-xs font-normal text-slate-500 ml-1">KK</span></p>
+                </div>
+              </motion.div>
+
+              <motion.div variants={itemVariants} className="group bg-slate-800/40 p-5 rounded-3xl border border-white/5 flex items-center gap-5 hover:bg-slate-800/60 transition-all duration-300 sm:col-span-2 lg:col-span-1">
+                <div className="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-400 border border-amber-500/10 group-hover:scale-110 transition-transform duration-300">
                   <TrendingUp size={28} />
                 </div>
                 <div>

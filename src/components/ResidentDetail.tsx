@@ -85,11 +85,6 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
               <div>
                 <div className="flex items-center gap-3">
                   <h2 className="text-xl font-bold text-white leading-tight">{resident.fullName}</h2>
-                  {isReadOnly && (
-                    <span className="flex items-center gap-1 px-1.5 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-md text-[8px] font-black uppercase tracking-widest shadow-sm" title={`Milik: ${ownerEmail || 'Akun Lain'}`}>
-                      <Users size={8} /> {ownerEmail || 'Akses Berbagi'}
-                    </span>
-                  )}
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <p className="text-xs text-indigo-400 font-mono tracking-tighter">NIK: {resident.nik}</p>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Users, CreditCard, Calendar, MapPin, Trash2, Edit2, ChevronRight, Zap, Check, X, RefreshCcw, CheckCircle2, History } from 'lucide-react';
+import { Users, User, CreditCard, Calendar, MapPin, Trash2, Edit2, ChevronRight, Zap, Check, X, RefreshCcw, CheckCircle2, History, Briefcase } from 'lucide-react';
 import { Resident, ResidentStatus } from '../types';
 import { calculateAge, MARITAL_STATUSES, FAMILY_POSITIONS, getInitials, getColorFromName } from '../lib/utils';
 import { format } from 'date-fns';
@@ -97,26 +97,16 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
 
       <div className="flex justify-between items-start mb-3">
         <div className="flex items-center gap-3">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white overflow-hidden shadow-lg border border-white/10 ${resident.photoUrl ? 'bg-slate-800' : getColorFromName(resident.fullName)}`}>
-            {resident.photoUrl ? (
-              <img src={resident.photoUrl} alt={resident.fullName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-            ) : (
-              <span className="text-base font-black tracking-tight">{getInitials(resident.fullName)}</span>
-            )}
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white overflow-hidden shadow-lg border border-white/10 ${getColorFromName(resident.fullName)}`}>
+            <span className="text-base font-black tracking-tight">{getInitials(resident.fullName)}</span>
           </div>
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
               <p className="text-[9px] text-indigo-400 font-mono tracking-tight">NIK {resident.nik}</p>
               {resident.updatedAt ? (
-                <div className="flex items-center gap-1" title="Tersinkronisasi">
-                  <CheckCircle2 size={10} className="text-emerald-500" />
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                </div>
+                <CheckCircle2 size={12} className="text-emerald-500" />
               ) : (
-                <div className="flex items-center gap-1" title="Tersimpan Lokal">
-                  <RefreshCcw size={10} className="text-amber-500 animate-spin-slow" />
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                </div>
+                <RefreshCcw size={12} className="text-amber-500 animate-spin-slow" />
               )}
             </div>
             <h3 className="font-bold text-slate-100 text-base leading-tight flex items-center gap-2">
@@ -180,11 +170,17 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
 
       <div className="grid grid-cols-2 gap-y-3 gap-x-4">
         <div className="flex flex-col">
-          <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest opacity-60">No. KK</span>
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <CreditCard size={10} className="text-slate-500" />
+            <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest opacity-60">No. KK</span>
+          </div>
           <span className="text-xs font-bold text-slate-300 truncate">{resident.kkNumber}</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest opacity-60">Hubungan</span>
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <Users size={10} className="text-slate-500" />
+            <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest opacity-60">Hubungan</span>
+          </div>
           {isInlineEditing ? (
             <select
               value={inlineFamilyPosition}
@@ -199,21 +195,31 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
           )}
         </div>
         <div className="flex flex-col">
-          <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest opacity-60">Tgl Lahir</span>
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <Calendar size={10} className="text-slate-500" />
+            <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest opacity-60">Tgl Lahir</span>
+          </div>
           <span className="text-xs font-bold text-slate-300 line-clamp-1">{format(new Date(resident.birthDate), 'dd/MM/yyyy')}</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest opacity-60">Usia</span>
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <User size={10} className="text-slate-500" />
+            <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest opacity-60">Usia</span>
+          </div>
           <span className="text-xs font-black text-indigo-400">{calculateAge(resident.birthDate)} Thn</span>
         </div>
         <div className="flex flex-col col-span-2 bg-slate-950/40 p-2 rounded-xl border border-white/5 mt-0.5 shadow-inner">
-          <span className="text-[8px] text-indigo-400/60 uppercase font-black tracking-[0.15em] mb-0.5">Pekerjaan</span>
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <Briefcase size={10} className="text-indigo-400/60" />
+            <span className="text-[8px] text-indigo-400/60 uppercase font-black tracking-[0.15em]">Pekerjaan</span>
+          </div>
           <span className="text-xs font-bold text-white leading-tight truncate">{resident.occupation}</span>
         </div>
       </div>
       
       <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-slate-500">
         <div className="flex items-center gap-1">
+          <User size={12} className="text-slate-500" />
           <span>{resident.gender} • </span>
           {isInlineEditing ? (
             <select
@@ -247,18 +253,11 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
             </button>
           </div>
         ) : (
-          <motion.div 
-            whileHover={{ x: 3 }}
-            whileTap={{ scale: 0.95 }}
+          <div 
             className="flex items-center gap-1 text-indigo-500 font-bold"
           >
-            Detail <motion.span
-              animate={{ x: [0, 2, 0] }}
-              transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-            >
-              <ChevronRight size={14} />
-            </motion.span>
-          </motion.div>
+            Detail <ChevronRight size={14} />
+          </div>
         )}
       </div>
     </motion.div>

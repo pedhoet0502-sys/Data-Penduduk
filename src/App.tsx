@@ -562,8 +562,8 @@ export default function App() {
           </div>
         )}
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8 cursor-pointer group" onClick={() => setIsStatsOpen(true)}>
-          {/* Row 1: Total & New */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-8 cursor-pointer group" onClick={() => setIsStatsOpen(true)}>
+          {/* Row 1: Total, KK, & New */}
           <div className="bg-slate-900/40 p-4 rounded-3xl border border-white/10 shadow-sm group-hover:border-indigo-500/50 transition-all flex flex-col justify-between">
             <span className="text-[9px] uppercase font-black text-slate-500 tracking-[0.2em] block leading-none mb-2">Total Warga</span>
             <div className="flex items-center justify-between">
@@ -573,8 +573,20 @@ export default function App() {
               </div>
             </div>
           </div>
+
+          <div className="bg-slate-900/40 p-4 rounded-3xl border border-white/10 shadow-sm group-hover:border-emerald-500/50 transition-all flex flex-col justify-between">
+            <span className="text-[9px] uppercase font-black text-slate-500 tracking-[0.2em] block leading-none mb-2">Kepala Keluarga</span>
+            <div className="flex items-center justify-between">
+              <span className="text-2xl font-black text-white leading-none tracking-tighter">
+                {residents.filter(r => r.familyPosition === 'Kepala Keluarga' && (r.status === ResidentStatus.ACTIVE || !r.status)).length}
+              </span>
+              <div className="w-8 h-8 bg-slate-950/30 rounded-lg flex items-center justify-center">
+                <Fingerprint size={14} className="text-slate-600 group-hover:text-emerald-400" />
+              </div>
+            </div>
+          </div>
           
-          <div className="bg-indigo-600 p-4 rounded-3xl shadow-lg shadow-indigo-600/20 text-white group-hover:bg-indigo-500 transition-all flex flex-col justify-between">
+          <div className="bg-indigo-600 p-4 rounded-3xl shadow-lg shadow-indigo-600/20 text-white group-hover:bg-indigo-500 transition-all flex flex-col justify-between sm:col-span-2 lg:col-span-1">
             <span className="text-[9px] uppercase font-black text-indigo-200 tracking-[0.2em] block leading-none mb-2">Data Baru</span>
             <div className="flex items-center justify-between">
               <span className="text-2xl font-black leading-none tracking-tighter">{residents.filter(r => {
@@ -588,7 +600,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 col-span-1 sm:col-span-2">
+          <div className="grid grid-cols-2 gap-3 col-span-1 sm:col-span-2 lg:col-span-3">
             {/* Row 2: Male & Female */}
             <div className="bg-slate-900/60 p-4 rounded-3xl border border-white/10 shadow-sm group-hover:border-indigo-500/50 transition-all flex flex-col justify-center min-w-0">
               <div className="flex items-center gap-2 sm:gap-3">
@@ -787,7 +799,9 @@ export default function App() {
           {activeTab === 'residents' ? (
             <>
               <div className="flex items-center justify-between mb-2 px-2">
-                <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Daftar Penduduk ({filteredResidents.length})</h2>
+                <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+                  Daftar Penduduk ({filteredResidents.length} Jiwa | {filteredResidents.filter(r => r.familyPosition === 'Kepala Keluarga').length} KK)
+                </h2>
                 {filteredResidents.length > 0 && (
                   <span className="text-[10px] font-bold text-slate-600 bg-slate-900 px-2 py-0.5 rounded-full border border-white/5">
                     Aktif & Valid
