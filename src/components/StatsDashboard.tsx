@@ -1,17 +1,19 @@
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, PieChart as PieIcon, BarChart3, TrendingUp, Users, User, Calendar, Briefcase, Database, Mars, Venus, Fingerprint } from 'lucide-react';
+import { X, PieChart as PieIcon, BarChart3, TrendingUp, Users, User, Calendar, Briefcase, Database, Mars, Venus, Fingerprint, GraduationCap, Baby, Skull, UserPlus, UserMinus, History, Home } from 'lucide-react';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, Cell as RechartsCell
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, Cell as RechartsCell,
+  LineChart, Line
 } from 'recharts';
-import { Resident } from '../types';
+import { Resident, Mutation, MutationType } from '../types';
 import { calculateAge, getAgeCategory } from '../lib/utils';
 
 interface StatsDashboardProps {
   isOpen: boolean;
   onClose: () => void;
   residents: Resident[];
+  mutations: Mutation[];
 }
 
 const COLORS = [
@@ -42,13 +44,18 @@ const itemVariants = {
   visible: { opacity: 1, y: 0 }
 };
 
-export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose, residents }) => {
+export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose, residents, mutations }) => {
   const stats = useMemo(() => {
     const ageGroupsCount: Record<string, number> = {};
     const pyramidGroups: Record<string, { male: number; female: number }> = {};
     const genderDist: Record<string, number> = { 'Laki-laki': 0, 'Perempuan': 0 };
     const occupationDist: Record<string, number> = {};
     const familyPositionDist: Record<string, number> = {};
+    const educationDist: Record<string, number> = {};
+    const residenceDist: Record<string, number> = {};
+    const religionDist: Record<string, number> = {};
+    const maritalDist: Record<string, number> = {};
+    const bloodDist: Record<string, number> = {};
     const productiveDist = { 'Belum Produktif (0-14)': 0, 'Produktif (15-64)': 0, 'Tidak Produktif (>64)': 0 };
     const categoryDist: Record<string, { total: number; male: number; female: number }> = {
       'Balita': { total: 0, male: 0, female: 0 },
@@ -60,6 +67,46 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
     let totalAge = 0;
     let minAge = Infinity;
     let maxAge = -Infinity;
+
+    // Mutation Stats
+    const mutationCounts = {
+      [MutationType.BIRTH]: 0,
+      [MutationType.DEATH]: 0,
+      [MutationType.COMING]: 0,
+      [MutationType.MOVING]: 0
+    };
+
+    mutations.forEach(m => {
+      if (mutationCounts[m.type] !== undefined) {
+        mutationCounts[m.type]++;
+      }
+    });
+
+    // Mutation Trend (Last 6 months)
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const now = new Date();
+    const last6Months = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      return {
+        month: months[d.getMonth()],
+        year: d.getFullYear(),
+        timestamp: d.getTime(),
+        births: 0,
+        deaths: 0,
+        migration: 0
+      };
+    }).reverse();
+
+    mutations.forEach(m => {
+      const mutDate = new Date(m.date);
+      const mIdx = last6Months.findIndex(l => l.month === months[mutDate.getMonth()] && l.year === mutDate.getFullYear());
+      if (mIdx !== -1) {
+        if (m.type === MutationType.BIRTH) last6Months[mIdx].births++;
+        if (m.type === MutationType.DEATH) last6Months[mIdx].deaths++;
+        if (m.type === MutationType.COMING) last6Months[mIdx].migration++;
+        if (m.type === MutationType.MOVING) last6Months[mIdx].migration--;
+      }
+    });
 
     // Pre-initialize standard 5-year categories for a proper pyramid shape
     const PYRAMID_CATEGORIES = [
@@ -119,6 +166,23 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
       const occ = r.occupation || 'Tidak Ada Data';
       occupationDist[occ] = (occupationDist[occ] || 0) + 1;
 
+      const edu = r.education || 'Tidak Sekolah';
+      educationDist[edu] = (educationDist[edu] || 0) + 1;
+
+      const status = r.residenceStatus || 'Lainnya';
+      if (r.familyPosition === 'Kepala Keluarga') {
+        residenceDist[status] = (residenceDist[status] || 0) + 1;
+      }
+
+      const religion = r.religion || 'Lainnya';
+      religionDist[religion] = (religionDist[religion] || 0) + 1;
+
+      const marital = r.maritalStatus || 'Lainnya';
+      maritalDist[marital] = (maritalDist[marital] || 0) + 1;
+
+      const blood = r.bloodType || 'Tidak Tahu';
+      bloodDist[blood] = (bloodDist[blood] || 0) + 1;
+
       const pos = r.familyPosition || 'Lainnya';
       familyPositionDist[pos] = (familyPositionDist[pos] || 0) + 1;
       
@@ -158,21 +222,52 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 8); // Show top 8 for space
+
+    const educationData = Object.entries(educationDist)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => {
+        const order = ['Tidak Sekolah', 'SD', 'SMP', 'SMA/SMK', 'Diploma', 'S1', 'S2', 'S3'];
+        return order.indexOf(a.name) - order.indexOf(b.name);
+      });
+
+    const residenceData = Object.entries(residenceDist)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
+    const religionData = Object.entries(religionDist)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
+    const maritalData = Object.entries(maritalDist)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
+    const bloodData = Object.entries(bloodDist)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
     return {
       ageData,
       pyramidData,
       pyramidMax,
       genderData,
       occupationData,
+      educationData,
+      residenceData,
+      religionData,
+      maritalData,
+      bloodData,
       productiveData,
       categoryData,
       headOfFamilyCount: familyPositionDist['Kepala Keluarga'] || 0,
       minAge: residents.length > 0 ? minAge : 0,
       maxAge: residents.length > 0 ? maxAge : 0,
       avgAge: residents.length > 0 ? (totalAge / residents.length).toFixed(1) : 0,
-      total: residents.length
+      total: residents.length,
+      mutationCounts,
+      mutationTrend: last6Months
     };
-  }, [residents]);
+  }, [residents, mutations]);
 
   if (!isOpen) return null;
 
@@ -214,7 +309,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
             initial="hidden"
             animate="visible"
           >
-            {/* Informative Demographic Summary */}
+            {/* Demographic Overview */}
             <motion.div variants={itemVariants} className="mb-10">
               <div className="bg-slate-950/40 border border-white/5 rounded-[2.5rem] p-8 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -306,66 +401,142 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
               </div>
             </motion.div>
 
-            {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
-              {/* Row 1: Total, KK, & Avg Age */}
-              <motion.div variants={itemVariants} className="group bg-slate-800/40 p-5 rounded-3xl border border-white/5 flex items-center gap-5 hover:bg-slate-800/60 transition-all duration-300">
-                <div className="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-500/10 group-hover:scale-110 transition-transform duration-300">
-                   <Users size={28} />
+            {/* Vital Statistics (Population Dynamics) */}
+            <motion.div variants={itemVariants} className="mb-10">
+              <div className="bg-slate-950/40 border border-white/5 rounded-[2.5rem] p-8 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <History size={120} className="text-emerald-500" />
                 </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest leading-tight mb-1">Total Penduduk</p>
-                  <p className="text-3xl font-black text-white tracking-tighter">{stats.total} <span className="text-xs font-normal text-slate-500 ml-1">Jiwa</span></p>
-                </div>
-              </motion.div>
+                
+                <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3">
+                  <div className="w-2 h-8 bg-emerald-500 rounded-full" />
+                  Dinamika Penduduk (Vital Statistics)
+                </h3>
 
-              <motion.div variants={itemVariants} className="group bg-slate-800/40 p-5 rounded-3xl border border-white/5 flex items-center gap-5 hover:bg-slate-800/60 transition-all duration-300">
-                <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-500/10 group-hover:scale-110 transition-transform duration-300">
-                  <Fingerprint size={28} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest leading-tight mb-1">Total Keluarga</p>
-                  <p className="text-3xl font-black text-white tracking-tighter">{stats.headOfFamilyCount} <span className="text-xs font-normal text-slate-500 ml-1">KK</span></p>
-                </div>
-              </motion.div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10 mb-8">
+                  <div className="bg-slate-900/60 p-5 rounded-3xl border border-emerald-500/10 hover:bg-slate-900/80 transition-colors">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-400">
+                        <Baby size={18} />
+                      </div>
+                      <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Kelahiran</span>
+                    </div>
+                    <p className="text-3xl font-black text-white tracking-tighter">{stats.mutationCounts[MutationType.BIRTH]}</p>
+                    <p className="text-[10px] text-slate-500 mt-1">Total bayi lahir terdaftar</p>
+                  </div>
 
-              <motion.div variants={itemVariants} className="group bg-slate-800/40 p-5 rounded-3xl border border-white/5 flex items-center gap-5 hover:bg-slate-800/60 transition-all duration-300 sm:col-span-2 lg:col-span-1">
-                <div className="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-400 border border-amber-500/10 group-hover:scale-110 transition-transform duration-300">
-                  <TrendingUp size={28} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest leading-tight mb-1">Rata-rata Usia</p>
-                  <p className="text-3xl font-black text-white tracking-tighter">{stats.avgAge} <span className="text-xs font-normal text-slate-500 ml-1">Thn</span></p>
-                </div>
-              </motion.div>
-              
-              {/* Row 2: Male & Female */}
-              <motion.div variants={itemVariants} className="group bg-slate-900/40 p-5 rounded-3xl border border-indigo-500/10 flex items-center gap-5 hover:bg-slate-900/60 transition-all duration-300">
-                <div className="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-500/10 group-hover:scale-110 transition-transform duration-300">
-                  <Mars size={28} strokeWidth={2.5} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-indigo-400 tracking-widest leading-tight mb-1">Laki-laki</p>
-                  <div className="flex items-baseline gap-3">
-                    <p className="text-3xl font-black text-white tracking-tighter">{stats.genderData[0].value}</p>
-                    <span className="text-xs font-black text-slate-500 bg-white/5 px-2 py-0.5 rounded-full">{Math.round((stats.genderData[0].value / (stats.total || 1)) * 100)}%</span>
+                  <div className="bg-slate-900/60 p-5 rounded-3xl border border-rose-500/10 hover:bg-slate-900/80 transition-colors">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-rose-500/10 rounded-xl text-rose-400">
+                        <Skull size={18} />
+                      </div>
+                      <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Kematian</span>
+                    </div>
+                    <p className="text-3xl font-black text-white tracking-tighter">{stats.mutationCounts[MutationType.DEATH]}</p>
+                    <p className="text-[10px] text-slate-500 mt-1">Total laporan kematian</p>
+                  </div>
+
+                  <div className="bg-slate-900/60 p-5 rounded-3xl border border-indigo-500/10 hover:bg-slate-900/80 transition-colors">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-indigo-500/10 rounded-xl text-indigo-400">
+                        <UserPlus size={18} />
+                      </div>
+                      <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Pindah Datang</span>
+                    </div>
+                    <p className="text-3xl font-black text-white tracking-tighter">{stats.mutationCounts[MutationType.COMING]}</p>
+                    <p className="text-[10px] text-slate-500 mt-1">Penduduk baru masuk</p>
+                  </div>
+
+                  <div className="bg-slate-900/60 p-5 rounded-3xl border border-amber-500/10 hover:bg-slate-900/80 transition-colors">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-amber-500/10 rounded-xl text-amber-400">
+                        <UserMinus size={18} />
+                      </div>
+                      <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Pindah Keluar</span>
+                    </div>
+                    <p className="text-3xl font-black text-white tracking-tighter">{stats.mutationCounts[MutationType.MOVING]}</p>
+                    <p className="text-[10px] text-slate-500 mt-1">Penduduk pindah alamat</p>
                   </div>
                 </div>
-              </motion.div>
 
-              <motion.div variants={itemVariants} className="group bg-slate-900/40 p-5 rounded-3xl border border-pink-500/10 flex items-center gap-5 hover:bg-slate-900/60 transition-all duration-300">
-                <div className="w-14 h-14 bg-pink-500/10 rounded-2xl flex items-center justify-center text-pink-400 border border-pink-500/10 group-hover:scale-110 transition-transform duration-300">
-                  <Venus size={28} strokeWidth={2.5} />
+                <div className="h-[200px] w-full bg-slate-900/40 rounded-3xl p-4 border border-white/5">
+                  <h4 className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 px-2">Tren Perubahan (6 Bulan Terakhir)</h4>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={stats.mutationTrend}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                      <XAxis dataKey="month" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#0f172a', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '1rem' }}
+                      />
+                      <Line type="monotone" dataKey="births" name="Lahir" stroke="#10b981" strokeWidth={3} dot={{ fill: '#10b981' }} />
+                      <Line type="monotone" dataKey="deaths" name="Mati" stroke="#f43f5e" strokeWidth={3} dot={{ fill: '#f43f5e' }} />
+                      <Line type="monotone" dataKey="migration" name="Net Migrasi" stroke="#6366f1" strokeWidth={2} strokeDasharray="5 5" />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-pink-400 tracking-widest leading-tight mb-1">Perempuan</p>
-                  <div className="flex items-baseline gap-3">
-                    <p className="text-3xl font-black text-white tracking-tighter">{stats.genderData[1].value}</p>
-                    <span className="text-xs font-black text-slate-500 bg-white/5 px-2 py-0.5 rounded-full">{Math.round((stats.genderData[1].value / (stats.total || 1)) * 100)}%</span>
+              </div>
+            </motion.div>
+
+            {/* Gender Distribution Pie Chart */}
+            <motion.div variants={itemVariants} className="mb-10">
+              <div className="relative bg-slate-800/30 p-8 rounded-[2.5rem] border border-white/5 overflow-hidden group">
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/10 blur-[80px] rounded-full group-hover:bg-indigo-500/20 transition-colors" />
+                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                  <PieIcon size={18} className="text-indigo-400" /> Distribusi Gender
+                </h3>
+                
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
+                  <div className="h-[220px] w-[220px] relative">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={stats.genderData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={90}
+                          paddingAngle={8}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          <Cell fill="#6366f1" />
+                          <Cell fill="#ec4899" />
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: '#0f172a', 
+                            borderColor: 'rgba(255,255,255,0.1)', 
+                            borderRadius: '1rem',
+                            fontSize: '12px'
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest leading-none">Total</p>
+                      <p className="text-2xl font-black text-white leading-none mt-1">{stats.total}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3 w-full sm:w-auto">
+                    {stats.genderData.map((entry, index) => (
+                      <div key={index} className="bg-white/5 p-4 rounded-2xl border border-white/5 min-w-[160px] flex items-center gap-4 group/item hover:bg-white/10 transition-colors">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${index === 0 ? 'bg-indigo-500/10 text-indigo-400' : 'bg-pink-500/10 text-pink-400'} border border-current/10`}>
+                          {index === 0 ? <Mars size={20} /> : <Venus size={20} />}
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">{entry.name}</p>
+                          <div className="flex items-baseline gap-2">
+                            <p className="text-xl font-black text-white leading-none">{entry.value}</p>
+                            <p className="text-xs font-bold text-slate-400">{Math.round((entry.value / (stats.total || 1)) * 100)}%</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </motion.div>
-            </div>
+              </div>
+            </motion.div>
 
             {/* Age Category Bar Chart */}
             <motion.div variants={itemVariants} className="mb-10">
@@ -451,40 +622,6 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
               </div>
             </motion.div>
  
-            <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-              {/* Pie Chart: Productive Groups */}
-              <div className="relative bg-slate-800/30 p-8 rounded-[2.5rem] border border-white/5 overflow-hidden group">
-                <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/10 blur-[80px] rounded-full group-hover:bg-emerald-500/20 transition-colors" />
-                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                  <PieIcon size={18} className="text-emerald-400" /> Rasio Ketergantungan
-                </h3>
-                <div className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={stats.productiveData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {stats.productiveData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={['#94a3b8', '#10b981', '#f43f5e'][index % 3]} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#0f172a', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '1rem' }}
-                        itemStyle={{ color: '#fff' }}
-                      />
-                      <Legend verticalAlign="bottom" height={36}/>
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </motion.div>
-
             {/* Pyramid Chart: Age Groups */}
             <motion.div variants={itemVariants} className="mb-10">
               <div className="relative bg-slate-800/30 p-8 rounded-[2.5rem] border border-white/5 group">
@@ -615,6 +752,122 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
                 </div>
               </div>
             </motion.div>
+
+            {/* Residence Status Section */}
+            <motion.div variants={itemVariants} className="mb-10">
+              <div className="relative bg-slate-800/30 p-8 rounded-[2.5rem] border border-white/5 overflow-hidden group">
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/10 blur-[80px] rounded-full group-hover:bg-blue-500/20 transition-colors" />
+                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                  <Home size={18} className="text-blue-400" /> Status Tempat Tinggal
+                </h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {stats.residenceData.map((data, idx) => (
+                    <div key={idx} className="bg-slate-900/40 p-5 rounded-3xl border border-white/5 hover:bg-slate-900/60 transition-colors group/res">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="p-2 bg-blue-500/10 rounded-xl text-blue-400">
+                          <Home size={16} />
+                        </div>
+                        <span className="text-[10px] font-black text-slate-500 bg-white/5 px-2 py-0.5 rounded-full">
+                          {Math.round((data.value / (stats.headOfFamilyCount || 1)) * 100)}%
+                        </span>
+                      </div>
+                      <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1">{data.name}</p>
+                      <div className="flex items-baseline gap-2">
+                        <p className="text-3xl font-black text-white leading-none">{data.value}</p>
+                        <p className="text-xs font-bold text-slate-500">KK</p>
+                      </div>
+                      
+                      <div className="mt-4 h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${(data.value / (stats.headOfFamilyCount || 1)) * 100}%` }}
+                          transition={{ duration: 1, delay: 0.5 }}
+                          className="h-full bg-blue-500 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)]"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Summary Card */}
+                  <div className="lg:col-span-1 bg-gradient-to-br from-indigo-600/20 to-blue-600/20 p-6 rounded-3xl border border-blue-500/20 flex flex-col justify-center">
+                    <p className="text-sm font-bold text-blue-300 mb-2 italic">Analisis Kepemilikan</p>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Mayoritas keluarga memiliki status tempat tinggal <span className="text-white font-bold">{stats.residenceData[0]?.name}</span> dengan persentase <span className="text-white font-bold">{Math.round((stats.residenceData[0]?.value / (stats.headOfFamilyCount || 1)) * 100)}%</span>.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+ 
+            {/* Donut Chart: Dependency Ratio */}
+            <motion.div variants={itemVariants} className="mb-10">
+              <div className="relative bg-slate-800/30 p-8 rounded-[2.5rem] border border-white/5 overflow-hidden group">
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/10 blur-[80px] rounded-full group-hover:bg-emerald-500/20 transition-colors" />
+                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                  <PieIcon size={18} className="text-emerald-400" /> Rasio Ketergantungan (Dependency Ratio)
+                </h3>
+                
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-12">
+                  <div className="h-[220px] w-[220px] relative">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={stats.productiveData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={65}
+                          outerRadius={95}
+                          paddingAngle={8}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          <Cell fill="#94a3b8" /> {/* Belum Produktif */}
+                          <Cell fill="#10b981" /> {/* Produktif */}
+                          <Cell fill="#f43f5e" /> {/* Tidak Produktif */}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: '#0f172a', 
+                            borderColor: 'rgba(255,255,255,0.1)', 
+                            borderRadius: '1rem',
+                            fontSize: '12px'
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest leading-none">Total</p>
+                      <p className="text-2xl font-black text-white leading-none mt-1">{stats.total}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3 w-full sm:w-auto">
+                    {stats.productiveData.map((entry, index) => (
+                      <div key={index} className="bg-white/5 p-4 rounded-2xl border border-white/5 min-w-[200px] flex items-center gap-4 group/item hover:bg-white/10 transition-colors">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${index === 0 ? 'bg-slate-500/10 text-slate-400' : index === 1 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'} border border-current/10 font-black text-[10px]`}>
+                          {index === 0 ? 'BP' : index === 1 ? 'P' : 'TP'}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">
+                            {index === 0 ? 'Belum Produktif' : index === 1 ? 'Produktif' : 'Tidak Produktif'}
+                          </p>
+                          <div className="flex items-baseline justify-between">
+                            <p className="text-lg font-black text-white leading-none">{entry.value}</p>
+                            <p className="text-[10px] font-bold text-slate-400">{Math.round((entry.value / (stats.total || 1)) * 100)}%</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="mt-2 p-3 bg-indigo-500/5 rounded-xl border border-indigo-500/10">
+                       <p className="text-[9px] text-indigo-300 leading-tight">
+                         Angka ketergantungan mengukur beban ekonomi penduduk produktif terhadap non-produktif.
+                       </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
  
             <motion.div variants={itemVariants} className="flex items-center gap-3 mb-6 mt-10">
               <div className="w-10 h-1 bg-indigo-500 rounded-full" />
@@ -622,118 +875,167 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
             </motion.div>
  
             <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-10">
-              {/* Pie Chart: Gender */}
-              <div className="relative bg-slate-800/30 p-8 rounded-[2.5rem] border border-white/5 overflow-hidden group">
-                <div className="absolute -top-24 -right-24 w-48 h-48 bg-purple-500/10 blur-[80px] rounded-full group-hover:bg-purple-500/20 transition-colors" />
+              {/* Education Distribution Simplified List */}
+              <div className="relative bg-slate-800/30 p-8 rounded-[2.5rem] border border-white/5 overflow-hidden group flex flex-col">
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/10 blur-[80px] rounded-full group-hover:bg-emerald-500/20 transition-colors" />
                 <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                  <PieIcon size={18} className="text-indigo-400" /> Distribusi Gender
+                  <GraduationCap size={18} className="text-emerald-400" /> Distribusi Tingkat Pendidikan
                 </h3>
                 
-                <div className="grid grid-cols-1 gap-6 mb-6">
-                  <div className="bg-slate-950/40 border border-white/10 p-5 rounded-[2.5rem] shadow-2xl relative overflow-hidden group/stats">
-                    <div className="flex flex-col gap-4 relative z-10">
-                      {/* Laki-laki Large Row */}
-                      <div className="flex items-center justify-between bg-slate-900/60 p-5 rounded-3xl border border-white/5 group/row hover:bg-slate-900/80 transition-colors">
-                        <div className="flex items-center gap-6">
-                          <div className="w-16 h-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center border border-indigo-500/20 shadow-xl group-hover/row:scale-110 transition-transform">
-                            <Mars size={32} className="text-indigo-400" strokeWidth={2.5} />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-3 mb-1">
-                              <p className="text-xs font-black uppercase text-indigo-400 tracking-[0.2em] leading-none">Laki-laki</p>
-                              <span className="text-[10px] font-black text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
-                                {Math.round((stats.genderData.find(g => g.name === 'Laki-laki')?.value || 0) / (stats.total || 1) * 100)}%
-                              </span>
-                            </div>
-                            <p className="text-5xl font-black text-white leading-none tracking-tighter">
-                              {stats.genderData.find(g => g.name === 'Laki-laki')?.value || 0}
-                              <span className="text-sm font-bold text-slate-500 ml-2 uppercase tracking-widest">Jiwa</span>
-                            </p>
-                          </div>
+                <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
+                  <div className="xl:col-span-3 space-y-4">
+                    {stats.educationData.map((entry, index) => (
+                      <div key={index} className="group/edu">
+                        <div className="flex justify-between items-end mb-1.5">
+                          <p className="text-xs font-bold text-slate-300 group-hover/edu:text-white transition-colors">{entry.name}</p>
+                          <p className="text-xs font-black text-white">{entry.value} <span className="text-slate-500 font-normal">Jiwa ({Math.round((entry.value / (stats.total || 1)) * 100)}%)</span></p>
+                        </div>
+                        <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden border border-white/5">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${(entry.value / (Math.max(...stats.educationData.map(e => e.value)) || 1)) * 100}%` }}
+                            transition={{ duration: 1.2, delay: index * 0.1, ease: "easeOut" }}
+                            className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full shadow-[0_0_12px_rgba(16,185,129,0.3)]"
+                          />
                         </div>
                       </div>
+                    ))}
+                  </div>
 
-                      {/* Perempuan Large Row */}
-                      <div className="flex items-center justify-between bg-slate-900/60 p-5 rounded-3xl border border-white/5 group/row hover:bg-slate-900/80 transition-colors">
-                        <div className="flex items-center gap-6">
-                          <div className="w-16 h-16 bg-pink-500/10 rounded-2xl flex items-center justify-center border border-pink-500/20 shadow-xl group-hover/row:scale-110 transition-transform">
-                            <Venus size={32} className="text-pink-400" strokeWidth={2.5} />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-3 mb-1">
-                              <p className="text-xs font-black uppercase text-pink-400 tracking-[0.2em] leading-none">Perempuan</p>
-                              <span className="text-[10px] font-black text-pink-300 bg-pink-500/10 px-2 py-0.5 rounded-full border border-pink-500/20">
-                                {Math.round((stats.genderData.find(g => g.name === 'Perempuan')?.value || 0) / (stats.total || 1) * 100)}%
-                              </span>
-                            </div>
-                            <p className="text-5xl font-black text-white leading-none tracking-tighter">
-                              {stats.genderData.find(g => g.name === 'Perempuan')?.value || 0}
-                              <span className="text-sm font-bold text-slate-500 ml-2 uppercase tracking-widest">Jiwa</span>
-                            </p>
-                          </div>
-                        </div>
+                  <div className="xl:col-span-2 flex flex-col justify-center gap-6">
+                    <div className="bg-emerald-500/5 border border-emerald-500/10 p-6 rounded-3xl relative overflow-hidden">
+                      <div className="absolute -top-6 -right-6 text-emerald-500/10">
+                         <GraduationCap size={80} strokeWidth={1} />
+                      </div>
+                      <p className="text-xs font-black uppercase text-emerald-400 tracking-widest mb-3">Analisis Pendidikan</p>
+                      <p className="text-sm text-slate-400 leading-relaxed">
+                        Tingkat pendidikan dominan di wilayah ini adalah <span className="text-white font-bold">{stats.educationData[0]?.name || '-'}</span>.
+                        Data menunjukkan keberagaman profil kompetensi akademik penduduk yang menjadi potensi pengembangan sumber daya manusia desa.
+                      </p>
+                      <div className="mt-4 pt-4 border-t border-emerald-500/10 flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <p className="text-[10px] font-bold text-emerald-300 uppercase tracking-tighter">Update Berdasarkan Data Terbaru</p>
                       </div>
                     </div>
                   </div>
                 </div>
-
-                <div className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={stats.genderData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {stats.genderData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={index === 0 ? '#6366f1' : '#ec4899'} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#0f172a', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)' }}
-                        itemStyle={{ color: '#fff' }}
-                      />
-                      <Legend verticalAlign="bottom" height={36}/>
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
               </div>
- 
-              {/* Bar Chart: Occupations */}
-              <div className="relative bg-slate-800/30 p-8 rounded-[2.5rem] border border-white/5 lg:col-span-1 overflow-hidden group">
+
+              {/* Simplified Top Occupations List */}
+              <div className="relative bg-slate-800/30 p-8 rounded-[2.5rem] border border-white/5 overflow-hidden group flex flex-col">
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-cyan-500/10 blur-[80px] rounded-full group-hover:bg-cyan-500/20 transition-colors" />
                 <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                  <Briefcase size={18} className="text-indigo-400" /> Pekerjaan Teratas
+                  <Briefcase size={18} className="text-cyan-400" /> Pekerjaan Teratas
                 </h3>
-                <div className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart layout="vertical" data={stats.occupationData.slice(0, 5)} margin={{ left: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
-                      <XAxis type="number" stroke="#94a3b8" fontSize={8} tickLine={false} axisLine={false} />
-                      <YAxis 
-                        dataKey="name" 
-                        type="category" 
-                        stroke="#94a3b8" 
-                        fontSize={8} 
-                        tickLine={false} 
-                        axisLine={false}
-                        width={100}
-                      />
-                      <Tooltip 
-                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                        contentStyle={{ backgroundColor: '#0f172a', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '1rem' }}
-                      />
-                      <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                        {stats.occupationData.slice(0, 5).map((entry, index) => (
-                          <RechartsCell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                
+                <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
+                  <div className="xl:col-span-3 space-y-4">
+                    {stats.occupationData.slice(0, 5).map((entry, index) => (
+                      <div key={index} className="group/occ">
+                        <div className="flex justify-between items-end mb-1.5">
+                          <p className="text-xs font-bold text-slate-300 group-hover/occ:text-white transition-colors">{entry.name}</p>
+                          <p className="text-xs font-black text-white">{entry.value} <span className="text-slate-500 font-normal">Jiwa ({Math.round((entry.value / (stats.total || 1)) * 100)}%)</span></p>
+                        </div>
+                        <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden border border-white/5">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${(entry.value / (Math.max(...stats.occupationData.map(e => e.value)) || 1)) * 100}%` }}
+                            transition={{ duration: 1.2, delay: index * 0.1, ease: "easeOut" }}
+                            className="h-full bg-gradient-to-r from-cyan-600 to-cyan-400 rounded-full shadow-[0_0_12px_rgba(6,182,212,0.3)]"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="xl:col-span-2 flex flex-col justify-center gap-6">
+                    <div className="bg-cyan-500/5 border border-cyan-500/10 p-6 rounded-3xl relative overflow-hidden">
+                      <div className="absolute -top-6 -right-6 text-cyan-500/10">
+                         <Briefcase size={80} strokeWidth={1} />
+                      </div>
+                      <p className="text-xs font-black uppercase text-cyan-400 tracking-widest mb-3">Analisis Ekonomi</p>
+                      <p className="text-sm text-slate-400 leading-relaxed">
+                        Sektor pekerjaan terbesar didominasi oleh <span className="text-white font-bold">{stats.occupationData[0]?.name || '-'}</span>.
+                        Hal ini mencerminkan basis ekonomi utama warga yang sangat dipengaruhi oleh karakteristik geografis dan potensi lokal wilayah tersebut.
+                      </p>
+                      <div className="mt-4 pt-4 border-t border-cyan-500/10 flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+                        <p className="text-[10px] font-bold text-cyan-300 uppercase tracking-tighter">Struktur Mata Pencaharian</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Social & Health Stats Section */}
+              <div className="lg:col-span-2 mt-8 space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Religion Distribution */}
+                  <div className="bg-slate-800/40 p-6 rounded-[2rem] border border-white/5 relative overflow-hidden group">
+                    <div className="absolute -top-12 -right-12 w-24 h-24 bg-indigo-500/5 blur-3xl rounded-full" />
+                    <h4 className="text-xs font-black uppercase text-indigo-400 tracking-widest mb-4 flex items-center gap-2">
+                       Agama
+                    </h4>
+                    <div className="space-y-3">
+                      {stats.religionData.map((data, idx) => (
+                        <div key={idx} className="flex flex-col gap-1">
+                          <div className="flex justify-between text-[11px] font-bold">
+                            <span className="text-slate-400">{data.name}</span>
+                            <span className="text-white">{data.value} <span className="text-slate-500 font-normal">({Math.round((data.value / (stats.total || 1)) * 100)}%)</span></span>
+                          </div>
+                          <div className="h-1 w-full bg-slate-900 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-indigo-500 rounded-full" 
+                              style={{ width: `${(data.value / (stats.total || 1)) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Marital Status Distribution */}
+                  <div className="bg-slate-800/40 p-6 rounded-[2rem] border border-white/5 relative overflow-hidden group">
+                    <div className="absolute -top-12 -right-12 w-24 h-24 bg-pink-500/5 blur-3xl rounded-full" />
+                    <h4 className="text-xs font-black uppercase text-pink-400 tracking-widest mb-4 flex items-center gap-2">
+                       Status Perkawinan
+                    </h4>
+                    <div className="space-y-3">
+                      {stats.maritalData.map((data, idx) => (
+                        <div key={idx} className="flex flex-col gap-1">
+                          <div className="flex justify-between text-[11px] font-bold">
+                            <span className="text-slate-400">{data.name}</span>
+                            <span className="text-white">{data.value} <span className="text-slate-500 font-normal">({Math.round((data.value / (stats.total || 1)) * 100)}%)</span></span>
+                          </div>
+                          <div className="h-1 w-full bg-slate-900 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-pink-500 rounded-full" 
+                              style={{ width: `${(data.value / (stats.total || 1)) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Blood Type Distribution */}
+                  <div className="bg-slate-800/40 p-6 rounded-[2rem] border border-white/5 relative overflow-hidden group">
+                    <div className="absolute -top-12 -right-12 w-24 h-24 bg-rose-500/5 blur-3xl rounded-full" />
+                    <h4 className="text-xs font-black uppercase text-rose-400 tracking-widest mb-4 flex items-center gap-2">
+                       Golongan Darah
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {stats.bloodData.map((data, idx) => (
+                        <div key={idx} className="bg-slate-900/40 p-3 rounded-2xl border border-white/5">
+                           <div className="flex justify-between items-baseline mb-1">
+                             <span className="text-sm font-black text-white">{data.name}</span>
+                             <span className="text-[9px] font-bold text-rose-400">{Math.round((data.value / (stats.total || 1)) * 100)}%</span>
+                           </div>
+                           <p className="text-[10px] text-slate-500">{data.value} Jiwa</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </motion.div>

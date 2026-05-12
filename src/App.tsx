@@ -993,6 +993,7 @@ export default function App() {
         isOpen={isStatsOpen}
         onClose={() => setIsStatsOpen(false)}
         residents={residents}
+        mutations={mutations}
       />
 
       <Toast 
