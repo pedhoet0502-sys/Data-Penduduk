@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Users, User, CreditCard, Calendar, MapPin, Trash2, Edit2, ChevronRight, Zap, Check, X, RefreshCcw, CheckCircle2, History, Briefcase } from 'lucide-react';
+import { Users, User, CreditCard, Calendar, MapPin, Trash2, Edit2, ChevronRight, Zap, Check, X, RefreshCcw, CheckCircle2, History, Briefcase, UserPlus } from 'lucide-react';
 import { Resident, ResidentStatus } from '../types';
 import { calculateAge, MARITAL_STATUSES, FAMILY_POSITIONS, getInitials, getColorFromName } from '../lib/utils';
 import { format } from 'date-fns';
@@ -195,7 +195,27 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
               {FAMILY_POSITIONS.map(pos => <option key={pos} value={pos}>{pos}</option>)}
             </select>
           ) : (
-            <span className="text-xs font-bold text-slate-300">{resident.familyPosition}</span>
+            <div className="flex items-center justify-between w-full">
+              <span className="text-xs font-bold text-slate-300">{resident.familyPosition}</span>
+              {resident.idCardStatus === 'Luar Wilayah' && (
+                <motion.div 
+                  initial={{ opacity: 0.4, scale: 0.8 }}
+                  animate={{ 
+                    opacity: [0.4, 1, 0.4],
+                    scale: [0.8, 1.1, 0.8],
+                  }}
+                  transition={{ 
+                    duration: 2, 
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                  className="p-0.5 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-500 flex items-center justify-center shrink-0 ml-2"
+                  title="KTP Luar Wilayah"
+                >
+                  <UserPlus size={10} />
+                </motion.div>
+              )}
+            </div>
           )}
         </div>
         <div className="flex flex-col">

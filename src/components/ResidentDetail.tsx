@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, CreditCard, MapPin, Calendar, Scroll, Heart, Users, Briefcase, RefreshCcw, CheckCircle2, GraduationCap, Droplets, Phone, Home, History, Copy, Check } from 'lucide-react';
+import { X, User, CreditCard, MapPin, Calendar, Scroll, Heart, Users, Briefcase, RefreshCcw, CheckCircle2, GraduationCap, Droplets, Phone, Home, History, Copy, Check, BadgeCheck, ShieldCheck, Building2, Globe } from 'lucide-react';
 import { Resident, ResidentStatus, Mutation } from '../types';
 import { calculateAge, getInitials, getColorFromName } from '../lib/utils';
 import { format } from 'date-fns';
@@ -112,6 +112,23 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
           <div className="p-6 overflow-y-auto custom-scrollbar">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <DetailItem icon={CreditCard} label="Nomor KK" value={resident.kkNumber} canCopy={true} />
+              <DetailItem icon={CreditCard} label="Status KTP" value={resident.idCardStatus} color="text-sky-400" />
+              {resident.familyPosition === 'Kepala Keluarga' && resident.residencyCategory && (
+                <DetailItem 
+                  icon={
+                    resident.residencyCategory === 'K1' ? Home : 
+                    resident.residencyCategory === 'K2' ? Building2 : 
+                    Globe
+                  } 
+                  label="Kategori" 
+                  value={resident.residencyCategory} 
+                  color={
+                    resident.residencyCategory === 'K1' ? 'text-emerald-400 font-black' : 
+                    resident.residencyCategory === 'K2' ? 'text-sky-400 font-black' : 
+                    'text-amber-400 font-black'
+                  } 
+                />
+              )}
               <DetailItem icon={Users} label="Status Keluarga" value={resident.familyPosition} />
               {resident.familyPosition === 'Kepala Keluarga' && resident.residenceStatus && (
                 <DetailItem icon={Home} label="Status Tempat Tinggal" value={resident.residenceStatus} color="text-violet-400" />

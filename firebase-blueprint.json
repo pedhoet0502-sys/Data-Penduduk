@@ -81,6 +81,15 @@
           "enum": ["Milik Sendiri", "Sewa/Kontrak", "Menumpang", "Rumah Dinas", "Lainnya"],
           "description": "Status Tempat Tinggal"
         },
+        "idCardStatus": {
+          "type": "string",
+          "enum": ["Setempat", "Luar Wilayah"],
+          "description": "Status KTP"
+        },
+        "residencyCategory": {
+          "type": "string",
+          "description": "Kategori Kependudukan otomatis"
+        },
         "photoUrl": {
           "type": "string",
           "description": "URL foto profil penduduk"

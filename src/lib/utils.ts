@@ -27,6 +27,7 @@ export const MARITAL_STATUSES = ['Belum Kawin', 'Kawin', 'Cerai Hidup', 'Cerai M
 export const FAMILY_POSITIONS = ['Kepala Keluarga', 'Istri', 'Anak', 'Mertua', 'Orang Tua', 'Cucu', 'Lainnya'];
 export const BLOOD_TYPES = ['-', 'A', 'B', 'AB', 'O'];
 export const RESIDENCE_STATUSES = ['Milik Sendiri', 'Sewa/Kontrak', 'Menumpang', 'Rumah Dinas', 'Lainnya'];
+export const ID_CARD_STATUSES = ['Setempat', 'Luar Wilayah'];
 
 export function getInitials(name: string): string {
   if (!name) return '?';

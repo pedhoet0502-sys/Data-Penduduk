@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Save, AlertCircle, Camera, Upload, Loader2, Image as ImageIcon, Calendar } from 'lucide-react';
+import { X, Save, AlertCircle, Camera, Upload, Loader2, Image as ImageIcon, Calendar, ShieldCheck, Home, Building2, Globe } from 'lucide-react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { id } from 'date-fns/locale';
 import { format, parseISO, isValid } from 'date-fns';
 import "react-datepicker/dist/react-datepicker.css";
-import { Gender, Resident, ResidenceStatus, ResidentStatus, MutationType } from '../types';
-import { RELIGIONS, EDUCATIONS, MARITAL_STATUSES, FAMILY_POSITIONS, OCCUPATIONS, BLOOD_TYPES, RESIDENCE_STATUSES, calculateAge } from '../lib/utils';
+import { Gender, Resident, ResidenceStatus, IDCardStatus, ResidentStatus, MutationType } from '../types';
+import { RELIGIONS, EDUCATIONS, MARITAL_STATUSES, FAMILY_POSITIONS, OCCUPATIONS, BLOOD_TYPES, RESIDENCE_STATUSES, ID_CARD_STATUSES, calculateAge } from '../lib/utils';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../lib/firebase';
 
@@ -47,6 +47,7 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
     familyPosition: FAMILY_POSITIONS[0],
     occupation: OCCUPATIONS[0],
     residenceStatus: ResidenceStatus.OWNED,
+    idCardStatus: IDCardStatus.LOCAL,
     fatherName: '',
     motherName: '',
     bloodType: '-',
@@ -61,6 +62,21 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const calculateResidencyCategory = (idCard?: string, residence?: string, familyPos?: string) => {
+    if (familyPos !== 'Kepala Keluarga' || !idCard) return '';
+    
+    // Default to 'Lainnya' if not specified or doesn't match keys
+    const card = idCard;
+    const res = residence || '';
+
+    if (card === 'Setempat' && res === 'Milik Sendiri') return 'Warga Tetap Mandiri';
+    if (card === 'Setempat' && res === 'Sewa/Kontrak') return 'Warga Tetap Kontrak';
+    if (card === 'Luar Wilayah' && res === 'Milik Sendiri') return 'Warga Domisili Pemilik';
+    if (card === 'Luar Wilayah' && res === 'Sewa/Kontrak') return 'Warga Pendatang';
+    
+    return '';
+  };
 
   useEffect(() => {
     if (initialData) {
@@ -77,6 +93,7 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
         familyPosition: initialData.familyPosition || FAMILY_POSITIONS[0],
         occupation: initialData.occupation || OCCUPATIONS[0],
         residenceStatus: initialData.residenceStatus || ResidenceStatus.OWNED,
+        idCardStatus: initialData.idCardStatus || IDCardStatus.LOCAL,
         fatherName: initialData.fatherName || '',
         motherName: initialData.motherName || '',
         bloodType: initialData.bloodType || '-',
@@ -84,6 +101,7 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
         photoUrl: initialData.photoUrl || '',
         status: initialData.status || ResidentStatus.ACTIVE,
         inactiveDate: initialData.inactiveDate || '',
+        residencyCategory: initialData.residencyCategory || calculateResidencyCategory(initialData.idCardStatus, initialData.residenceStatus, initialData.familyPosition),
       });
       setPreviewUrl(initialData.photoUrl || null);
     } else {
@@ -100,12 +118,14 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
         familyPosition: FAMILY_POSITIONS[0],
         occupation: OCCUPATIONS[0],
         residenceStatus: ResidenceStatus.OWNED,
+        idCardStatus: IDCardStatus.LOCAL,
         fatherName: '',
         motherName: '',
         bloodType: '-',
         phone: '',
         photoUrl: '',
         status: ResidentStatus.ACTIVE,
+        residencyCategory: calculateResidencyCategory(IDCardStatus.LOCAL, ResidenceStatus.OWNED, FAMILY_POSITIONS[0]),
       });
       setPreviewUrl(null);
     }
@@ -197,6 +217,10 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
       setError('Pilih Pekerjaan');
       return;
     }
+    if (!formData.idCardStatus) {
+      setError('Pilih Status KTP');
+      return;
+    }
     if (formData.familyPosition === 'Kepala Keluarga' && !formData.residenceStatus) {
       setError('Pilih Status Tempat Tinggal');
       return;
@@ -235,7 +259,8 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
         (r.phone || '') === (formData.phone || '') &&
         r.fatherName?.trim().toLowerCase() === formData.fatherName?.trim().toLowerCase() &&
         r.motherName?.trim().toLowerCase() === formData.motherName?.trim().toLowerCase() &&
-        r.residenceStatus === formData.residenceStatus
+        r.residenceStatus === formData.residenceStatus &&
+        r.idCardStatus === formData.idCardStatus
       );
     });
 
@@ -258,7 +283,11 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
       return;
     }
 
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value };
+      const category = calculateResidencyCategory(newData.idCardStatus, newData.residenceStatus, newData.familyPosition);
+      return { ...newData, residencyCategory: category };
+    });
   };
 
   if (!isOpen) return null;
@@ -598,6 +627,36 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
                   {OCCUPATIONS.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
+
+              <div className="space-y-1.5 col-span-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Status KTP</label>
+                <select
+                  name="idCardStatus"
+                  value={formData.idCardStatus}
+                  onChange={handleInputChange}
+                  className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-3 text-sm text-white outline-none focus:border-indigo-500/50 cursor-pointer"
+                  id="select-idCardStatus"
+                  required
+                >
+                  {ID_CARD_STATUSES.map(status => <option key={status} value={status}>{status}</option>)}
+                </select>
+              </div>
+
+              {formData.familyPosition === 'Kepala Keluarga' && formData.residencyCategory && (
+                <div className="space-y-1.5 col-span-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Kategori Kependudukan</label>
+                  <div className={`w-full border rounded-xl p-3 text-sm font-black flex items-center gap-2 ${
+                    formData.residencyCategory === 'K1' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
+                    formData.residencyCategory === 'K2' ? 'bg-sky-500/10 border-sky-500/20 text-sky-400' :
+                    'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                  }`}>
+                    {formData.residencyCategory === 'K1' ? <Home size={18} /> :
+                     formData.residencyCategory === 'K2' ? <Building2 size={18} /> :
+                     <Globe size={18} />}
+                    {formData.residencyCategory}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="mt-auto pt-6 pb-8 flex flex-col gap-4">

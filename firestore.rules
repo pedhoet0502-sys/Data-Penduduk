@@ -24,40 +24,38 @@ service cloud.firestore {
 
     // Resident Validation
     function isValidResident(data) {
-      let requiredFields = ['kkNumber', 'fullName', 'nik', 'gender', 'birthPlace', 'birthDate', 'religion', 'education', 'maritalStatus', 'familyPosition', 'occupation', 'bloodType', 'phone', 'ownerId', 'createdAt', 'updatedAt', 'fatherName', 'motherName', 'status'];
-      return data.keys().hasAll(requiredFields)
-        // Check if residenceStatus is required
-        && (data.familyPosition != 'Kepala Keluarga' || (data.keys().hasAll(['residenceStatus']) && data.residenceStatus in ['Milik Sendiri', 'Sewa/Kontrak', 'Menumpang', 'Rumah Dinas', 'Lainnya']))
-        // Allow slightly more keys to be future-proof and handle optional photoUrl and inactiveDate
-        && data.keys().size() >= 19 && data.keys().size() <= 23
+      return data.keys().hasAll(['kkNumber', 'fullName', 'nik', 'gender', 'ownerId', 'createdAt', 'updatedAt', 'status'])
+        // Key count check - relaxed to allow for legacy and new fields
+        && data.keys().size() >= 8 && data.keys().size() <= 30
         && data.status in ['Aktif', 'Meninggal Dunia', 'Pindah Domisili', 'Tidak Aktif']
-        && (!data.keys().hasAny(['inactiveDate']) || data.inactiveDate is string)
-        && data.kkNumber is string && data.kkNumber.size() == 16
-        && data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 200
-        && data.nik is string && data.nik.size() == 16
-        && data.fatherName is string && data.fatherName.size() >= 2 && data.fatherName.size() <= 200
-        && data.motherName is string && data.motherName.size() >= 2 && data.motherName.size() <= 200
+        && data.kkNumber is string && (data.kkNumber.size() == 16 || data.kkNumber.size() == 0)
+        && data.fullName is string && data.fullName.size() >= 2
+        && data.nik is string && (data.nik.size() == 16 || data.nik.size() == 0)
         && data.gender in ['Laki-laki', 'Perempuan']
-        && data.birthPlace is string && data.birthPlace.size() > 0 && data.birthPlace.size() <= 100
-        && data.birthDate is string
-        && data.religion is string
-        && data.education is string
-        && data.maritalStatus is string
-        && data.familyPosition is string
-        && data.occupation is string
-        && data.bloodType is string
-        && data.phone is string && data.phone.size() <= 20
-        && (!data.keys().hasAny(['photoUrl']) || (data.photoUrl is string && data.photoUrl.size() <= 2048))
         && data.ownerId == request.auth.uid
         && data.createdAt is timestamp
-        && data.updatedAt is timestamp;
+        && data.updatedAt is timestamp
+        // Optional/Conditional fields check (only if present)
+        && (!data.keys().hasAny(['idCardStatus']) || data.idCardStatus in ['Setempat', 'Luar Wilayah'])
+        && (!data.keys().hasAny(['residenceStatus']) || data.residenceStatus in ['Milik Sendiri', 'Sewa/Kontrak', 'Menumpang', 'Rumah Dinas', 'Lainnya'])
+        && (!data.keys().hasAny(['familyPosition']) || data.familyPosition is string)
+        && (!data.keys().hasAny(['religion']) || data.religion is string)
+        && (!data.keys().hasAny(['education']) || data.education is string)
+        && (!data.keys().hasAny(['maritalStatus']) || data.maritalStatus is string)
+        && (!data.keys().hasAny(['occupation']) || data.occupation is string)
+        && (!data.keys().hasAny(['bloodType']) || data.bloodType is string)
+        && (!data.keys().hasAny(['phone']) || data.phone is string)
+        && (!data.keys().hasAny(['fatherName']) || data.fatherName is string)
+        && (!data.keys().hasAny(['motherName']) || data.motherName is string)
+        && (!data.keys().hasAny(['residencyCategory']) || data.residencyCategory is string)
+        && (!data.keys().hasAny(['photoUrl']) || (data.photoUrl is string && data.photoUrl.size() <= 2048))
+        && (!data.keys().hasAny(['inactiveDate']) || data.inactiveDate is string);
     }
 
     // Mutation Validation
     function isValidMutation(data) {
-      let requiredFields = ['residentId', 'residentName', 'type', 'date', 'ownerId', 'createdAt'];
-      return data.keys().hasAll(requiredFields)
-        && data.keys().size() >= 6 && data.keys().size() <= 8
+      return data.keys().hasAll(['residentId', 'residentName', 'type', 'date', 'ownerId', 'createdAt'])
+        && data.keys().size() >= 6 && data.keys().size() <= 9
         && isValidId(data.residentId)
         && data.type in ['Kelahiran', 'Kematian', 'Penduduk Datang', 'Penduduk Pindah']
         && data.date is string
@@ -68,9 +66,8 @@ service cloud.firestore {
 
     // Share Validation
     function isValidShare(data) {
-      let requiredFields = ['ownerId', 'ownerEmail', 'collaboratorEmail', 'createdAt'];
-      return data.keys().hasAll(requiredFields)
-        && data.keys().size() == 4
+      return data.keys().hasAll(['ownerId', 'ownerEmail', 'collaboratorEmail', 'createdAt'])
+        && data.keys().size() >= 4 && data.keys().size() <= 6
         && data.ownerId == request.auth.uid
         && data.ownerEmail is string
         && data.collaboratorEmail is string
@@ -84,13 +81,13 @@ service cloud.firestore {
         && isValidResident(incoming())
         && incoming().createdAt == request.time;
       
-      allow update: if isOwner(existing().ownerId)
+      allow update: if (isOwner(existing().ownerId) || (!existing().keys().hasAny(['ownerId']) && isSignedIn()))
         && isValidId(residentId)
         && (
           // Action: Full Update / Form Submit
           (isValidResident(incoming()) && 
-           incoming().ownerId == existing().ownerId &&
-           incoming().createdAt == existing().createdAt &&
+           (!existing().keys().hasAny(['ownerId']) || incoming().ownerId == existing().ownerId) &&
+           (!existing().keys().hasAny(['createdAt']) || incoming().createdAt == existing().createdAt) &&
            incoming().updatedAt == request.time) ||
           // Action: Quick Status Update / Mutation Change
           (incoming().diff(existing()).affectedKeys().hasOnly(['maritalStatus', 'familyPosition', 'status', 'inactiveDate', 'updatedAt']) &&

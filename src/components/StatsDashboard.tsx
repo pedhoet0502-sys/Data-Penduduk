@@ -56,6 +56,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
     const religionDist: Record<string, number> = {};
     const maritalDist: Record<string, number> = {};
     const bloodDist: Record<string, number> = {};
+    const idCardDist: Record<string, number> = {};
     const productiveDist = { 'Belum Produktif (0-14)': 0, 'Produktif (15-64)': 0, 'Tidak Produktif (>64)': 0 };
     const categoryDist: Record<string, { total: number; male: number; female: number }> = {
       'Balita': { total: 0, male: 0, female: 0 },
@@ -183,6 +184,9 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
       const blood = r.bloodType || 'Tidak Tahu';
       bloodDist[blood] = (bloodDist[blood] || 0) + 1;
 
+      const idCard = r.idCardStatus || 'Lainnya';
+      idCardDist[idCard] = (idCardDist[idCard] || 0) + 1;
+
       const pos = r.familyPosition || 'Lainnya';
       familyPositionDist[pos] = (familyPositionDist[pos] || 0) + 1;
       
@@ -246,6 +250,10 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
 
+    const idCardData = Object.entries(idCardDist)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
     return {
       ageData,
       pyramidData,
@@ -257,6 +265,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
       religionData,
       maritalData,
       bloodData,
+      idCardData,
       productiveData,
       categoryData,
       headOfFamilyCount: familyPositionDist['Kepala Keluarga'] || 0,
@@ -969,7 +978,31 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
 
               {/* Social & Health Stats Section */}
               <div className="lg:col-span-2 mt-8 space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {/* Status KTP Distribution */}
+                  <div className="bg-slate-800/40 p-6 rounded-[2rem] border border-white/5 relative overflow-hidden group">
+                    <div className="absolute -top-12 -right-12 w-24 h-24 bg-sky-500/5 blur-3xl rounded-full" />
+                    <h4 className="text-xs font-black uppercase text-sky-400 tracking-widest mb-4 flex items-center gap-2">
+                       Status KTP
+                    </h4>
+                    <div className="space-y-3">
+                      {stats.idCardData.map((data, idx) => (
+                        <div key={idx} className="flex flex-col gap-1">
+                          <div className="flex justify-between text-[11px] font-bold">
+                            <span className="text-slate-400">{data.name}</span>
+                            <span className="text-white">{data.value} <span className="text-slate-500 font-normal">({Math.round((data.value / (stats.total || 1)) * 100)}%)</span></span>
+                          </div>
+                          <div className="h-1 w-full bg-slate-900 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-sky-500 rounded-full" 
+                              style={{ width: `${(data.value / (stats.total || 1)) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Religion Distribution */}
                   <div className="bg-slate-800/40 p-6 rounded-[2rem] border border-white/5 relative overflow-hidden group">
                     <div className="absolute -top-12 -right-12 w-24 h-24 bg-indigo-500/5 blur-3xl rounded-full" />

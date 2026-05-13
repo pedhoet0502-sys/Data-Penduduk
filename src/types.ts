@@ -11,6 +11,11 @@ export enum ResidenceStatus {
   OTHERS = 'Lainnya'
 }
 
+export enum IDCardStatus {
+  LOCAL = 'Setempat',
+  OUTSIDE = 'Luar Wilayah'
+}
+
 export enum ResidentStatus {
   ACTIVE = 'Aktif',
   DECEASED = 'Meninggal Dunia',
@@ -54,6 +59,8 @@ export interface Resident {
   fatherName: string;
   motherName: string;
   residenceStatus?: ResidenceStatus;
+  idCardStatus?: IDCardStatus;
+  residencyCategory?: string;
   status: ResidentStatus;
   inactiveDate?: string;
   photoUrl?: string;
