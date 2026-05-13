@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, CreditCard, MapPin, Calendar, Scroll, Heart, Users, Briefcase, RefreshCcw, CheckCircle2, GraduationCap, Droplets, Phone, Home, History, Copy, Check, BadgeCheck, ShieldCheck, Building2, Globe } from 'lucide-react';
+import { X, User, CreditCard, MapPin, Calendar, Scroll, Heart, Users, Briefcase, RefreshCcw, CheckCircle2, GraduationCap, Droplets, Phone, Home, History, Copy, Check, BadgeCheck, ShieldCheck, Building2, Globe, Trash2, Edit2 } from 'lucide-react';
 import { Resident, ResidentStatus, Mutation } from '../types';
 import { calculateAge, getInitials, getColorFromName } from '../lib/utils';
 import { format } from 'date-fns';
@@ -10,13 +10,14 @@ interface ResidentDetailProps {
   onClose: () => void;
   resident: Resident | null;
   onEdit: (resident: Resident) => void;
+  onDelete: (id: string) => void;
   onAddMutation?: (resident: Resident) => void;
   mutations?: Mutation[]; // Added mutations
   isReadOnly?: boolean;
   ownerEmail?: string;
 }
 
-export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose, resident, onEdit, onAddMutation, mutations = [], isReadOnly = false, ownerEmail }) => {
+export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose, resident, onEdit, onDelete, onAddMutation, mutations = [], isReadOnly = false, ownerEmail }) => {
   if (!resident || !isOpen) return null;
 
   const residentMutations = mutations.filter(m => m.residentId === resident.id);
@@ -28,7 +29,7 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
     [ResidentStatus.INACTIVE]: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
   };
 
-  const DetailItem = ({ icon: Icon, label, value, color = "text-indigo-400", truncate = false, canCopy = false }: any) => {
+  const DetailItem = ({ icon: Icon, label, value, color = "text-indigo-400", truncate = false, canCopy = false, tracking = "tracking-wide" }: any) => {
     const [copied, setCopied] = React.useState(false);
 
     const handleCopy = (e: React.MouseEvent) => {
@@ -46,7 +47,7 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
         <div className="min-w-0 flex-1 overflow-hidden">
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">{label}</p>
           <div className="flex items-center gap-2">
-            <p className={`text-sm font-semibold text-white ${truncate ? 'truncate' : ''}`} title={value || '-'}>{value || '-'}</p>
+            <p className={`text-sm font-semibold text-white ${tracking} ${truncate ? 'truncate' : ''}`} title={value || '-'}>{value || '-'}</p>
             {canCopy && value && (
               <button 
                 onClick={handleCopy}
@@ -87,7 +88,7 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
                   <h2 className="text-xl font-bold text-white leading-tight">{resident.fullName}</h2>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                  <p className="text-xs text-indigo-400 font-mono tracking-tighter">NIK: {resident.nik}</p>
+                  <p className="text-[11px] text-indigo-400 font-mono tracking-widest bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">NIK: {resident.nik}</p>
                   <button 
                     onClick={() => {
                       navigator.clipboard.writeText(resident.nik);
@@ -111,7 +112,7 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
           {/* Content */}
           <div className="p-6 overflow-y-auto custom-scrollbar">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DetailItem icon={CreditCard} label="Nomor KK" value={resident.kkNumber} canCopy={true} />
+              <DetailItem icon={CreditCard} label="Nomor KK" value={resident.kkNumber} canCopy={true} tracking="tracking-[0.15em]" />
               <DetailItem icon={CreditCard} label="Status KTP" value={resident.idCardStatus} color="text-sky-400" />
               {resident.familyPosition === 'Kepala Keluarga' && resident.residencyCategory && (
                 <DetailItem 
@@ -204,25 +205,42 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="p-6 border-t border-white/10 bg-slate-950/30 flex flex-wrap justify-end gap-3">
-             {!isReadOnly && (resident.status || ResidentStatus.ACTIVE) === ResidentStatus.ACTIVE && onAddMutation && (
+          {/* Footer - Reorganized with icon-only buttons for a modern, compact feel */}
+          <div className="p-6 border-t border-white/10 bg-slate-950/30 flex items-center justify-between">
+            {/* Destructive Action (Left) */}
+            <div>
+              {!isReadOnly && (
+                <button 
+                  onClick={() => onDelete(resident.id)}
+                  className="w-12 h-12 text-rose-500 hover:bg-rose-500/10 font-bold rounded-xl border border-rose-500/10 hover:border-rose-500/20 transition-all flex items-center justify-center group active:scale-95"
+                  title="Hapus Data Penduduk"
+                >
+                  <Trash2 size={20} className="transition-transform group-hover:rotate-12" />
+                </button>
+              )}
+            </div>
+
+            {/* Constructive Actions (Right) */}
+            <div className="flex items-center gap-3">
+              {!isReadOnly && (resident.status || ResidentStatus.ACTIVE) === ResidentStatus.ACTIVE && onAddMutation && (
                 <button
                   onClick={() => onAddMutation(resident)}
-                  className="px-6 py-3 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 font-bold rounded-xl transition-all flex items-center gap-2 mr-auto"
+                  className="w-12 h-12 bg-slate-800/80 text-indigo-400 border border-white/5 hover:bg-slate-800 hover:text-indigo-300 rounded-xl transition-all flex items-center justify-center shadow-inner"
+                  title="Tambah Peristiwa / Mutasi"
                 >
-                  <History size={16} />
-                  Mutasi Data
+                  <History size={20} />
                 </button>
-             )}
-             {!isReadOnly && (
-               <button 
-                onClick={() => onEdit(resident)}
-                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-600/20"
-              >
-                Ubah Data
-              </button>
-             )}
+              )}
+              {!isReadOnly && (
+                <button 
+                  onClick={() => onEdit(resident)}
+                  className="w-12 h-12 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center transform active:scale-95 border border-indigo-500/30"
+                  title="Ubah Data Penduduk"
+                >
+                  <Edit2 size={20} />
+                </button>
+              )}
+            </div>
           </div>
         </motion.div>
       </div>

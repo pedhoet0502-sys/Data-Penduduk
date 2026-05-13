@@ -830,7 +830,6 @@ export default function App() {
                           setEditingResident(r);
                           setIsFormOpen(true);
                         }}
-                        onDelete={confirmDelete}
                         onViewDetail={(r) => {
                           setViewingResident(r);
                           setIsDetailOpen(true);
@@ -965,6 +964,7 @@ export default function App() {
           setEditingResident(r);
           setIsFormOpen(true);
         }}
+        onDelete={confirmDelete}
         onAddMutation={(r) => {
           setMutationResident(r);
           setIsMutationFormOpen(true);
