@@ -437,6 +437,15 @@ export default function App() {
             <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
             Masuk dengan Google
           </button>
+
+          <button
+            onClick={() => window.close()}
+            className="w-full mt-4 bg-slate-900/50 border border-white/10 text-slate-400 font-semibold py-4 px-6 rounded-2xl flex items-center justify-center gap-3 shadow-sm hover:bg-slate-800 hover:text-white transition-all active:scale-[0.98]"
+            id="exit-app-btn"
+          >
+            <LogOut size={18} />
+            Keluar Aplikasi
+          </button>
           
           <div className="mt-12 flex items-center justify-center gap-6 opacity-20">
             <Users size={20} className="text-white" />
@@ -927,6 +936,7 @@ export default function App() {
         }}
         onSubmit={handleSubmitResident}
         initialData={editingResident}
+        residents={residents}
       />
 
       {/* Collaboration Modal */}

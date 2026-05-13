@@ -30,9 +30,10 @@ interface ResidentFormProps {
   onClose: () => void;
   onSubmit: (data: Partial<Resident>, mutationType?: MutationType) => void;
   initialData?: Resident | null;
+  residents?: Resident[];
 }
 
-export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
+export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onSubmit, initialData, residents = [] }) => {
   const [formData, setFormData] = useState<Partial<Resident>>({
     kkNumber: '',
     fullName: '',
@@ -210,6 +211,36 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
     }
     if (formData.phone && !/^\d+$/.test(formData.phone)) {
       setError('Nomor Telepon harus berupa angka');
+      return;
+    }
+
+    // 🔍 Duplicate Check (Identical Data Detection)
+    const isDuplicate = residents.some(r => {
+      // Skip if we are editing the same resident
+      if (initialData && r.id === initialData.id) return false;
+
+      return (
+        r.kkNumber === formData.kkNumber &&
+        r.nik === formData.nik &&
+        r.fullName?.trim().toLowerCase() === formData.fullName?.trim().toLowerCase() &&
+        r.gender === formData.gender &&
+        r.birthPlace?.trim().toLowerCase() === formData.birthPlace?.trim().toLowerCase() &&
+        r.birthDate === formData.birthDate &&
+        r.religion === formData.religion &&
+        r.education === formData.education &&
+        r.maritalStatus === formData.maritalStatus &&
+        r.familyPosition === formData.familyPosition &&
+        r.occupation === formData.occupation &&
+        r.bloodType === formData.bloodType &&
+        (r.phone || '') === (formData.phone || '') &&
+        r.fatherName?.trim().toLowerCase() === formData.fatherName?.trim().toLowerCase() &&
+        r.motherName?.trim().toLowerCase() === formData.motherName?.trim().toLowerCase() &&
+        r.residenceStatus === formData.residenceStatus
+      );
+    });
+
+    if (isDuplicate) {
+      setError('Peringatan: Data ini sudah ada dalam sistem (Duplikat Identik). Silakan periksa kembali.');
       return;
     }
 
