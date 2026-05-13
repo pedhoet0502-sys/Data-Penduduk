@@ -14,10 +14,9 @@ interface ResidentDetailProps {
   onAddMutation?: (resident: Resident) => void;
   mutations?: Mutation[]; // Added mutations
   isReadOnly?: boolean;
-  ownerEmail?: string;
 }
 
-export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose, resident, onEdit, onDelete, onAddMutation, mutations = [], isReadOnly = false, ownerEmail }) => {
+export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose, resident, onEdit, onDelete, onAddMutation, mutations = [], isReadOnly = false }) => {
   if (!resident || !isOpen) return null;
 
   const residentMutations = mutations.filter(m => m.residentId === resident.id);

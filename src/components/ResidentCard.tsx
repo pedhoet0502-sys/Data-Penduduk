@@ -12,10 +12,9 @@ interface ResidentCardProps {
   onUpdate: (data: Partial<Resident>) => Promise<void>;
   onAddMutation?: (resident: Resident) => void;
   isReadOnly?: boolean;
-  ownerEmail?: string;
 }
 
-export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, onViewDetail, onUpdate, onAddMutation, isReadOnly = false, ownerEmail }) => {
+export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, onViewDetail, onUpdate, onAddMutation, isReadOnly = false }) => {
   const [isInlineEditing, setIsInlineEditing] = useState(false);
   const [inlineFamilyPosition, setInlineFamilyPosition] = useState(resident.familyPosition);
   const [inlineMaritalStatus, setInlineMaritalStatus] = useState(resident.maritalStatus);
@@ -113,8 +112,8 @@ export const ResidentCard: React.FC<ResidentCardProps> = ({ resident, onEdit, on
             <h3 className="font-extrabold text-white text-lg leading-tight tracking-tight flex items-center gap-2 group-hover:text-indigo-300 transition-colors">
               <span className="truncate">{resident.fullName}</span>
               {isReadOnly && (
-                <span className="flex items-center gap-1 px-1.5 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-md text-[7px] font-black uppercase tracking-widest shadow-sm truncate max-w-[80px]" title={`Milik: ${ownerEmail || 'Akun Lain'}`}>
-                  <Users size={7} /> {ownerEmail ? ownerEmail.split('@')[0] : 'Berbagi'}
+                <span className="flex items-center gap-1 px-1.5 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-md text-[7px] font-black uppercase tracking-widest shadow-sm truncate max-w-[80px]" title="Mode Baca Saja (Akses Terbatas)">
+                  <Users size={7} /> READ ONLY
                 </span>
               )}
             </h3>

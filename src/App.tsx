@@ -25,7 +25,6 @@ import { ResidentDetail } from './components/ResidentDetail';
 import { MutationForm } from './components/MutationForm';
 import { StatsDashboard } from './components/StatsDashboard';
 import { ConfirmationModal } from './components/ConfirmationModal';
-import { CollaborationModal } from './components/CollaborationModal';
 import { Toast, ToastType } from './components/Toast';
 import { handleFirestoreError, OperationType } from './lib/error-handler';
 import { History } from 'lucide-react';
@@ -52,10 +51,7 @@ export default function App() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
-  const [isCollaborationOpen, setIsCollaborationOpen] = useState(false);
   const [isMutationFormOpen, setIsMutationFormOpen] = useState(false);
-  const [sharesFromOthers, setSharesFromOthers] = useState<any[]>([]);
-  const [selectedOwnerId, setSelectedOwnerId] = useState<string>('semua');
   const [editingResident, setEditingResident] = useState<Resident | null>(null);
   const [viewingResident, setViewingResident] = useState<Resident | null>(null);
   const [mutationResident, setMutationResident] = useState<Resident | null>(null);
@@ -67,6 +63,10 @@ export default function App() {
     message: '',
     type: 'success'
   });
+
+  const isUserReadOnly = useMemo(() => {
+    return user?.email?.toLowerCase() === 'pedhoet0502@gmail.com';
+  }, [user]);
 
   const showToast = (message: string, type: ToastType = 'success') => {
     setToast({ isVisible: true, message, type });
@@ -92,67 +92,22 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!user || !user.email) {
-      setSharesFromOthers([]);
-      return;
-    }
-
-    const q = query(
-      collection(db, 'shares'),
-      where('collaboratorEmail', '==', user.email.toLowerCase().trim())
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setSharesFromOthers(data);
-    }, (error) => {
-      console.error('Error fetching shares:', error);
-      handleFirestoreError(error, OperationType.LIST, 'shares');
-    });
-
-    return () => unsubscribe();
-  }, [user]);
-
-  const sharedOwnerIds = useMemo(() => sharesFromOthers.map(s => s.ownerId), [sharesFromOthers]);
-  
-  const ownerEmailMap = useMemo(() => {
-    if (!user) return {};
-    const map: Record<string, string> = { [user.uid]: user.email || '' };
-    sharesFromOthers.forEach(s => {
-      map[s.ownerId] = s.ownerEmail;
-    });
-    return map;
-  }, [user, sharesFromOthers]);
-
-  useEffect(() => {
     if (!user) {
       setResidents([]);
       return;
     }
 
-    const ownerIds = selectedOwnerId === 'semua' ? [user.uid, ...sharedOwnerIds] : [selectedOwnerId];
-    
-    // Safety check: if selectedOwnerId is not in allowed list, reset to semua
-    if (selectedOwnerId !== 'semua' && selectedOwnerId !== user.uid && !sharedOwnerIds.includes(selectedOwnerId)) {
-      setSelectedOwnerId('semua');
-      return;
-    }
-
     let q;
-    if (ownerIds.length === 1) {
+    if (isUserReadOnly) {
+      // System viewer fetching EVERYTHING
       q = query(
         collection(db, 'residents'),
-        where('ownerId', '==', ownerIds[0]),
         orderBy('kkNumber', 'asc')
       );
     } else {
       q = query(
         collection(db, 'residents'),
-        where('ownerId', 'in', ownerIds),
-        orderBy('ownerId', 'asc'),
+        where('ownerId', '==', user.uid),
         orderBy('kkNumber', 'asc')
       );
     }
@@ -162,21 +117,16 @@ export default function App() {
         id: doc.id,
         ...doc.data()
       })) as Resident[];
-      // Client-side sort to match UI expectations if needed, but in-query is better
       setResidents(data);
       if (!snapshot.metadata.fromCache) {
         setLastSyncTime(new Date());
       }
     }, (error) => {
-      // If index is missing, we'll see it here. Fallback to simple query if needed.
-      if (error.message.includes('The query requires an index')) {
-         console.warn('Sharing across users requires a composite index. Falling back to personal view.');
-      }
       handleFirestoreError(error, OperationType.LIST, 'residents');
     });
 
     return () => unsubscribe();
-  }, [user, sharedOwnerIds]);
+  }, [user, isUserReadOnly]);
 
   useEffect(() => {
     if (!user) {
@@ -184,13 +134,19 @@ export default function App() {
       return;
     }
 
-    const ownerIds = [user.uid, ...sharedOwnerIds];
-
-    const q = query(
-      collection(db, 'mutations'),
-      where('ownerId', 'in', ownerIds),
-      orderBy('createdAt', 'desc')
-    );
+    let q;
+    if (isUserReadOnly) {
+      q = query(
+        collection(db, 'mutations'),
+        orderBy('createdAt', 'desc')
+      );
+    } else {
+      q = query(
+        collection(db, 'mutations'),
+        where('ownerId', '==', user.uid),
+        orderBy('createdAt', 'desc')
+      );
+    }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
@@ -203,7 +159,7 @@ export default function App() {
     });
 
     return () => unsubscribe();
-  }, [user, sharedOwnerIds]);
+  }, [user, isUserReadOnly]);
 
   const handleSignIn = async () => {
     try {
@@ -249,7 +205,7 @@ export default function App() {
   };
 
   const handleSubmitResident = async (data: Partial<Resident>, mutationType?: MutationType) => {
-    if (!user) return;
+    if (!user || isUserReadOnly) return;
     setSyncing(true);
 
     const residentId = editingResident?.id || (data as any).id;
@@ -313,7 +269,7 @@ export default function App() {
   };
 
   const handleDeleteResident = async () => {
-    if (!residentIdToDelete) return;
+    if (!residentIdToDelete || isUserReadOnly) return;
     try {
       await deleteDoc(doc(db, 'residents', residentIdToDelete));
       if (viewingResident?.id === residentIdToDelete) {
@@ -329,7 +285,7 @@ export default function App() {
   };
 
   const handleMutationSubmit = async (mutationData: Partial<Mutation>, updatedStatus: ResidentStatus, inactiveDate: string) => {
-    if (!user) return;
+    if (!user || isUserReadOnly) return;
     setSyncing(true);
 
     try {
@@ -468,24 +424,9 @@ export default function App() {
         </div>
         <div className="flex items-center gap-1 sm:gap-2">
           <button
-            onClick={() => setIsCollaborationOpen(true)}
-            className="flex items-center gap-2 px-2 sm:px-3 py-2 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-xl transition-all relative group"
-            title="Kelola Kolaborasi"
-          >
-            <div className="relative">
-              <Users size={18} />
-              {sharedOwnerIds.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-indigo-500 text-white text-[8px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center border-2 border-slate-900 shadow-lg">
-                  {sharedOwnerIds.length}
-                </span>
-              )}
-            </div>
-            <span className="text-xs font-bold hidden md:inline">Berbagi Akses</span>
-          </button>
-          <button
             onClick={() => setIsStatsOpen(true)}
             className="flex items-center gap-2 px-2 sm:px-3 py-2 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-xl transition-all relative group"
-            title="Lihat Statistik"
+            title="Liat Statistik"
           >
             <BarChart3 size={18} />
             <span className="text-xs font-bold hidden md:inline">Statistik</span>
@@ -691,7 +632,7 @@ export default function App() {
               className="overflow-hidden mb-8"
             >
               <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl">
-                <div className="flex items-center justify-between mb-4 px-1">
+                <div className="flex items-center justify-between px-1">
                   <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Opsi Penyaringan</h3>
                   <button 
                     onClick={() => {
@@ -707,26 +648,7 @@ export default function App() {
                   </button>
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                      <div className="bg-slate-950/40 p-3 rounded-xl border border-white/5">
-                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter block mb-2 px-1">
-                      Sumber Data
-                    </label>
-                    <select 
-                      value={selectedOwnerId}
-                      onChange={(e) => setSelectedOwnerId(e.target.value)}
-                      className="w-full bg-transparent border-none text-xs text-white outline-none cursor-pointer font-medium"
-                    >
-                      <option value="semua">Semua Akun</option>
-                      <option value={user.uid}>Data Saya</option>
-                      {sharesFromOthers.map(share => (
-                        <option key={share.ownerId} value={share.ownerId}>
-                          {share.ownerEmail}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div className="bg-slate-950/40 p-3 rounded-xl border border-white/5">
                     <label className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter block mb-2 px-1">
                       Jenis Kelamin
@@ -824,8 +746,7 @@ export default function App() {
                       <ResidentCard
                         key={resident.id}
                         resident={resident}
-                        isReadOnly={resident.ownerId !== user?.uid}
-                        ownerEmail={ownerEmailMap[resident.ownerId]}
+                        isReadOnly={isUserReadOnly}
                         onEdit={(r) => {
                           setEditingResident(r);
                           setIsFormOpen(true);
@@ -908,8 +829,8 @@ export default function App() {
         </div>
       </main>
 
-      {/* FAB - Hidden if viewing shared account only */}
-      {user && (selectedOwnerId === 'semua' || selectedOwnerId === user.uid) && (
+      {/* FAB - Hidden if user is read-only */}
+      {user && !isUserReadOnly && (
         <motion.button
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -938,22 +859,12 @@ export default function App() {
         residents={residents}
       />
 
-      {/* Collaboration Modal */}
-      {user && (
-        <CollaborationModal
-          isOpen={isCollaborationOpen}
-          onClose={() => setIsCollaborationOpen(false)}
-          user={user}
-        />
-      )}
-
       {/* Detail Dialog */}
       <ResidentDetail
         isOpen={isDetailOpen}
         resident={viewingResident}
         mutations={mutations}
-        isReadOnly={viewingResident?.ownerId !== user?.uid}
-        ownerEmail={viewingResident ? ownerEmailMap[viewingResident.ownerId] : undefined}
+        isReadOnly={isUserReadOnly || (viewingResident && viewingResident.ownerId !== user?.uid)}
         onClose={() => {
           setIsDetailOpen(false);
           setViewingResident(null);

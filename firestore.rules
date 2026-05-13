@@ -14,12 +14,10 @@ service cloud.firestore {
     function existing() { return resource.data; }
     function currentUserEmail() { return request.auth.token.email.lower(); }
 
-    function isCollaborator(ownerId) {
-      return isSignedIn() && exists(/databases/$(database)/documents/shares/$(currentUserEmail() + "_" + ownerId));
-    }
+    function isSystemViewer() { return isSignedIn() && currentUserEmail() == "pedhoet0502@gmail.com"; }
 
     function hasAccess(ownerId) {
-      return isOwner(ownerId) || isCollaborator(ownerId);
+      return isOwner(ownerId) || isSystemViewer();
     }
 
     // Resident Validation
@@ -97,7 +95,7 @@ service cloud.firestore {
       allow delete: if isOwner(existing().ownerId);
       
       allow get: if hasAccess(existing().ownerId);
-      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isCollaborator(resource.data.ownerId));
+      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isSystemViewer());
     }
 
     match /mutations/{mutationId} {
@@ -108,20 +106,8 @@ service cloud.firestore {
       
       allow get: if hasAccess(existing().ownerId);
       allow delete: if isOwner(existing().ownerId);
-      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isCollaborator(resource.data.ownerId));
+      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isSystemViewer());
     }
 
-    match /shares/{shareId} {
-      // shareId should be collaboratorEmail + "_" + ownerId
-      allow create: if isSignedIn() 
-        && isValidShare(incoming())
-        && incoming().createdAt == request.time;
-      
-      allow update: if isSignedIn()
-        && isOwner(existing().ownerId)
-        && isValidShare(incoming());
-
-      allow read, delete: if isSignedIn() && (resource.data.ownerId == request.auth.uid || resource.data.collaboratorEmail == currentUserEmail());
-    }
   }
 }
