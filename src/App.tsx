@@ -117,7 +117,42 @@ export default function App() {
         id: doc.id,
         ...doc.data()
       })) as Resident[];
-      setResidents(data);
+
+      // Custom Sort: 1. KK Number (ASC), 2. Family Position Priority (Custom)
+      const familyPriority: Record<string, number> = {
+        'Kepala Keluarga': 1,
+        'Istri': 2,
+        'Anak': 3,
+        'Mertua': 4,
+        'Orang Tua': 5,
+        'Cucu': 6,
+        'Lainnya': 10
+      };
+
+      const sortedData = [...data].sort((a, b) => {
+        // First compare by KK Number
+        if (a.kkNumber !== b.kkNumber) {
+          return a.kkNumber.localeCompare(b.kkNumber);
+        }
+        
+        // If same KK, sort by family position priority
+        const priorityA = familyPriority[a.familyPosition] || 99;
+        const priorityB = familyPriority[b.familyPosition] || 99;
+        
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+
+        // Sort by Birth Date (Oldest first)
+        if (a.birthDate !== b.birthDate) {
+          return a.birthDate.localeCompare(b.birthDate);
+        }
+
+        // Final tie-breaker: Name
+        return a.fullName.localeCompare(b.fullName);
+      });
+
+      setResidents(sortedData);
       if (!snapshot.metadata.fromCache) {
         setLastSyncTime(new Date());
       }
