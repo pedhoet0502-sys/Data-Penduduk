@@ -12,10 +12,17 @@ import {
   orderBy,
   getDocs
 } from 'firebase/firestore';
-import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  onAuthStateChanged, 
+  signOut, 
+  User as FirebaseUser,
+  sendPasswordResetEmail
+} from 'firebase/auth';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, parseISO } from 'date-fns';
-import { Plus, Search, LogOut, LogIn, Database, Users, User, Fingerprint, RefreshCcw, CheckCircle2, Filter, SlidersHorizontal, ChevronDown, BarChart3, TrendingUp, Mars, Venus } from 'lucide-react';
+import { Plus, Search, LogOut, LogIn, Database, Users, User, Lock, Fingerprint, RefreshCcw, CheckCircle2, Filter, SlidersHorizontal, ChevronDown, BarChart3, TrendingUp, Mars, Venus, Eye, EyeOff, Mail, AlertCircle } from 'lucide-react';
 import { db, auth } from './lib/firebase';
 import { Resident, Gender, Mutation, MutationType, ResidentStatus } from './types';
 import { RELIGIONS, EDUCATIONS, FAMILY_POSITIONS, RESIDENCE_STATUSES } from './lib/utils';
@@ -29,10 +36,16 @@ import { Toast, ToastType } from './components/Toast';
 import { handleFirestoreError, OperationType } from './lib/error-handler';
 import { History } from 'lucide-react';
 
-const provider = new GoogleAuthProvider();
 
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [mutations, setMutations] = useState<Mutation[]>([]);
   const [activeTab, setActiveTab] = useState<'residents' | 'mutations'>('residents');
@@ -206,23 +219,97 @@ export default function App() {
     return () => unsubscribe();
   }, [user, isUserReadOnly]);
 
-  const handleSignIn = async () => {
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
+      setAuthError('Silakan masukkan email dan kata sandi.');
+      return;
+    }
     if (!isOnline) {
       showToast('Tidak ada koneksi internet. Silakan coba lagi nanti.', 'error');
       return;
     }
 
+    setAuthLoading(true);
+    setAuthError(null);
     try {
-      await signInWithPopup(auth, provider);
+      await signInWithEmailAndPassword(auth, trimmedEmail, password);
+      showToast('Berhasil masuk');
     } catch (error: any) {
       console.error('Sign-in error:', error);
-      if (error.code === 'auth/network-request-failed') {
-        showToast('Gagal menghubungkan ke layanan autentikasi. Periksa koneksi internet atau pengaturan browser Anda.', 'error');
-      } else if (error.code === 'auth/popup-closed-by-user') {
-        // Silent error as the user chose to close the popup
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+        setAuthError('Email atau kata sandi tidak cocok. Pastikan Anda sudah mendaftar melalui menu "Daftar Disini" di bawah jika ini adalah pertama kali Anda menggunakan login email.');
+      } else if (error.code === 'auth/operation-not-allowed') {
+        setAuthError('Metode login email belum diaktifkan di konsol Firebase. Silakan hubungi administrator.');
+      } else if (error.code === 'auth/user-disabled') {
+        setAuthError('Akun ini telah dinonaktifkan.');
+      } else if (error.code === 'auth/network-request-failed') {
+        setAuthError('Gagal menghubungkan ke layanan autentikasi. Periksa koneksi internet Anda.');
+      } else if (error.code === 'auth/invalid-email') {
+        setAuthError('Format email tidak valid.');
       } else {
-        showToast('Gagal masuk. Silakan coba lagi.', 'error');
+        setAuthError(`Gagal masuk: ${error.message}`);
       }
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleEmailSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
+      setAuthError('Silakan masukkan email dan kata sandi.');
+      return;
+    }
+    if (password.length < 6) {
+      setAuthError('Kata sandi harus minimal 6 karakter demi keamanan.');
+      return;
+    }
+    if (!isOnline) {
+      showToast('Tidak ada koneksi internet.', 'error');
+      return;
+    }
+
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      await createUserWithEmailAndPassword(auth, trimmedEmail, password);
+      showToast('Akun berhasil dibuat dan otomatis masuk!');
+    } catch (error: any) {
+      console.error('Sign-up error:', error);
+      if (error.code === 'auth/email-already-in-use') {
+        setAuthError('Email ini sudah terdaftar. Silakan gunakan email lain atau langsung masuk melalui menu "Masuk" di bawah.');
+      } else if (error.code === 'auth/invalid-email') {
+        setAuthError('Format email tidak valid.');
+      } else if (error.code === 'auth/operation-not-allowed') {
+        setAuthError('Metode pendaftaran email belum diaktifkan di konsol Firebase.');
+      } else if (error.code === 'auth/weak-password') {
+        setAuthError('Kata sandi terlalu lemah. Gunakan kombinasi yang lebih rumit.');
+      } else {
+        setAuthError(`Gagal membuat akun: ${error.message}`);
+      }
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setAuthError('Silakan masukkan email Anda terlebih dahulu.');
+      return;
+    }
+    setAuthLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      showToast('Tautan atur ulang kata sandi telah dikirim ke email Anda.');
+      setShowResetPassword(false);
+    } catch (error: any) {
+      setAuthError('Gagal mengirim tautan atur ulang kata sandi.');
+    } finally {
+      setAuthLoading(false);
     }
   };
 
@@ -536,43 +623,142 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#020617] to-[#0f172a]">
         <motion.div
-           initial={{ opacity: 0, scale: 0.9 }}
+           initial={{ opacity: 0, scale: 0.95 }}
            animate={{ opacity: 1, scale: 1 }}
-           className="w-full max-w-sm"
+           className="w-full max-w-md"
         >
-          <div className="mb-8 flex justify-center">
-             <div className="w-20 h-20 bg-indigo-600 rounded-[2rem] flex items-center justify-center text-white shadow-2xl shadow-indigo-500/40">
-               <Fingerprint size={40} />
-             </div>
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-indigo-600 rounded-[2rem] text-white shadow-2xl shadow-indigo-500/40 mb-6 mx-auto">
+              <Lock size={40} />
+            </div>
+            <h1 className="text-3xl font-black text-white mb-2 tracking-tight">DATA WARGA</h1>
+            <h2 className="text-lg font-bold text-indigo-400 mb-6 tracking-tight">RT 05 RW 02</h2>
+            <p className="text-slate-400 leading-relaxed text-sm">
+              {isRegistering ? 'Buat akun baru untuk akses sistem' : 'Masuk ke sistem manajemen warga'}
+            </p>
           </div>
-          <h1 className="text-3xl font-black text-white mb-3 tracking-tight text-center">DATA WARGA</h1>
-          <h2 className="text-xl font-bold text-indigo-400 mb-3 tracking-tight text-center">RT 05 RW 02</h2>
-          <p className="text-slate-400 mb-10 leading-relaxed">Sistem informasi manajemen warga terpadu. Kelola data dengan aman dan praktis.</p>
-          
-          <button
-            onClick={handleSignIn}
-            className="w-full bg-white border border-white/5 text-slate-800 font-semibold py-4 px-6 rounded-2xl flex items-center justify-center gap-3 shadow-sm hover:bg-slate-50 transition-all active:scale-[0.98]"
-            id="login-btn"
-          >
-            <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
-            Masuk dengan Google
-          </button>
+
+          <div className="bg-slate-900/50 backdrop-blur-md p-8 rounded-3xl border border-white/5 shadow-2xl relative overflow-hidden">
+            {isRegistering && (
+              <div className="absolute top-0 right-0 p-4">
+                <span className="bg-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase px-3 py-1 rounded-full border border-indigo-500/20">Registrasi</span>
+              </div>
+            )}
+            
+            <form onSubmit={showResetPassword ? handleResetPassword : (isRegistering ? handleEmailSignUp : handleEmailSignIn)} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2 px-1">Email</label>
+                <div className="relative">
+                  <Mail size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="nama@email.com"
+                    className="w-full bg-slate-950/50 border border-white/5 rounded-2xl py-4 pl-14 pr-5 text-white outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-700"
+                    required
+                  />
+                </div>
+              </div>
+
+              {!showResetPassword && (
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2 px-1">Kata Sandi</label>
+                  <div className="relative">
+                    <Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full bg-slate-950/50 border border-white/5 rounded-2xl py-4 pl-14 pr-14 text-white outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-700"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-indigo-400 transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {authError && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-rose-500/10 border border-rose-500/20 p-4 rounded-xl text-xs text-rose-400 flex items-start gap-3"
+                >
+                  <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                  <p className="leading-relaxed">{authError}</p>
+                </motion.div>
+              )}
+
+              <button
+                type="submit"
+                disabled={authLoading}
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-2xl shadow-xl shadow-indigo-600/20 transition-all active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-50"
+              >
+                {authLoading ? (
+                  <RefreshCcw size={20} className="animate-spin" />
+                ) : (
+                  <>
+                    <LogIn size={20} />
+                    {showResetPassword ? 'Kirim Tautan Atur Ulang' : (isRegistering ? 'Daftar Sekarang' : 'Masuk ke Sistem')}
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="mt-8 pt-6 border-t border-white/5 space-y-4 text-center">
+              {!showResetPassword ? (
+                <>
+                  <p className="text-xs text-slate-500">
+                    {isRegistering ? 'Sudah punya akun?' : 'Belum punya akun?'}
+                    <button 
+                      onClick={() => {
+                        setIsRegistering(!isRegistering);
+                        setAuthError(null);
+                      }}
+                      className="ml-2 text-indigo-400 font-bold hover:text-indigo-300 underline underline-offset-4"
+                    >
+                      {isRegistering ? 'Masuk' : 'Daftar Disini'}
+                    </button>
+                  </p>
+                  <button 
+                    onClick={() => {
+                      setShowResetPassword(true);
+                      setAuthError(null);
+                    }}
+                    className="text-[10px] text-slate-600 hover:text-slate-400 font-medium uppercase tracking-widest transition-colors"
+                  >
+                    Lupa Kata Sandi?
+                  </button>
+                </>
+              ) : (
+                <button 
+                  onClick={() => {
+                    setShowResetPassword(false);
+                    setAuthError(null);
+                  }}
+                  className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest hover:text-indigo-300"
+                >
+                  Kembali ke Login
+                </button>
+              )}
+            </div>
+          </div>
 
           <button
             onClick={() => window.close()}
-            className="w-full mt-4 bg-slate-900/50 border border-white/10 text-slate-400 font-semibold py-4 px-6 rounded-2xl flex items-center justify-center gap-3 shadow-sm hover:bg-slate-800 hover:text-white transition-all active:scale-[0.98]"
-            id="exit-app-btn"
+            className="w-full mt-8 text-slate-600 text-xs font-bold uppercase tracking-[0.2em] hover:text-slate-400 transition-colors flex items-center justify-center gap-2"
           >
-            <LogOut size={18} />
-            Keluar Aplikasi
+            <LogOut size={14} /> Keluar Aplikasi
           </button>
-          
-          <div className="mt-12 flex items-center justify-center gap-6 opacity-20">
-            <Users size={20} className="text-white" />
-            <Database size={20} className="text-white" />
-          </div>
         </motion.div>
       </div>
     );
