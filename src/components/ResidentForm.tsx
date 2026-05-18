@@ -6,7 +6,7 @@ import { id } from 'date-fns/locale';
 import { format, parseISO, isValid } from 'date-fns';
 import "react-datepicker/dist/react-datepicker.css";
 import { Gender, Resident, ResidenceStatus, IDCardStatus, ResidentStatus, MutationType } from '../types';
-import { RELIGIONS, EDUCATIONS, MARITAL_STATUSES, FAMILY_POSITIONS, OCCUPATIONS, BLOOD_TYPES, RESIDENCE_STATUSES, ID_CARD_STATUSES, calculateAge } from '../lib/utils';
+import { RELIGIONS, EDUCATIONS, MARITAL_STATUSES, FAMILY_POSITIONS, OCCUPATIONS, BLOOD_TYPES, RESIDENCE_STATUSES, ID_CARD_STATUSES, calculateAge, compressImage } from '../lib/utils';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../lib/firebase';
 
@@ -145,9 +145,12 @@ export const ResidentForm: React.FC<ResidentFormProps> = ({ isOpen, onClose, onS
     setError(null);
 
     try {
+      // Compress image before upload
+      const compressedBlob = await compressImage(file, 600, 600, 0.6); // Smaller size and lower quality for profile photos
+      
       const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
       const storageRef = ref(storage, `residents/${Date.now()}_${safeFileName}`);
-      const snapshot = await uploadBytes(storageRef, file);
+      const snapshot = await uploadBytes(storageRef, compressedBlob);
       const url = await getDownloadURL(snapshot.ref);
       
       setFormData(prev => ({ ...prev, photoUrl: url }));

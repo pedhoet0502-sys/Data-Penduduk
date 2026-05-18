@@ -37,6 +37,7 @@ export default function App() {
   const [mutations, setMutations] = useState<Mutation[]>([]);
   const [activeTab, setActiveTab] = useState<'residents' | 'mutations'>('residents');
   const [loading, setLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [isOnline, setIsOnline] = useState(window.navigator.onLine);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(new Date());
@@ -73,6 +74,11 @@ export default function App() {
   };
 
   useEffect(() => {
+    // Splash screen duration
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2500);
+
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
@@ -157,6 +163,8 @@ export default function App() {
         setLastSyncTime(new Date());
       }
     }, (error) => {
+      console.error('Residents snapshot error:', error);
+      showToast(`Gagal memuat data penduduk: ${error.message}`, 'error');
       handleFirestoreError(error, OperationType.LIST, 'residents');
     });
 
@@ -190,6 +198,8 @@ export default function App() {
       })) as Mutation[];
       setMutations(data);
     }, (error) => {
+      console.error('Mutations snapshot error:', error);
+      showToast(`Gagal memuat riwayat mutasi: ${error.message}`, 'error');
       handleFirestoreError(error, OperationType.LIST, 'mutations');
     });
 
@@ -197,10 +207,22 @@ export default function App() {
   }, [user, isUserReadOnly]);
 
   const handleSignIn = async () => {
+    if (!isOnline) {
+      showToast('Tidak ada koneksi internet. Silakan coba lagi nanti.', 'error');
+      return;
+    }
+
     try {
       await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      console.error('Sign-in error:', error);
+      if (error.code === 'auth/network-request-failed') {
+        showToast('Gagal menghubungkan ke layanan autentikasi. Periksa koneksi internet atau pengaturan browser Anda.', 'error');
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        // Silent error as the user chose to close the popup
+      } else {
+        showToast('Gagal masuk. Silakan coba lagi.', 'error');
+      }
     }
   };
 
@@ -216,24 +238,53 @@ export default function App() {
     if (!user) return;
     setSyncing(true);
     try {
-      const q = query(
-        collection(db, 'residents'), 
-        where('ownerId', '==', user.uid),
-        orderBy('kkNumber', 'asc'),
-        orderBy('fullName', 'asc')
-      );
+      let q;
+      if (isUserReadOnly) {
+        q = query(
+          collection(db, 'residents'),
+          orderBy('kkNumber', 'asc')
+        );
+      } else {
+        q = query(
+          collection(db, 'residents'), 
+          where('ownerId', '==', user.uid),
+          orderBy('kkNumber', 'asc')
+        );
+      }
+      
       const querySnapshot = await getDocs(q);
       const data = querySnapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...(doc.data() as any)
       })) as Resident[];
-      setResidents(data);
+      
+      // Apply the same sort as the real-time listener
+      const familyPriority: Record<string, number> = {
+        'Kepala Keluarga': 1,
+        'Istri': 2,
+        'Anak': 3,
+        'Mertua': 4,
+        'Orang Tua': 5,
+        'Cucu': 6,
+        'Lainnya': 10
+      };
+
+      const sortedData = [...data].sort((a, b) => {
+        if (a.kkNumber !== b.kkNumber) return a.kkNumber.localeCompare(b.kkNumber);
+        const priorityA = familyPriority[a.familyPosition] || 99;
+        const priorityB = familyPriority[b.familyPosition] || 99;
+        if (priorityA !== priorityB) return priorityA - priorityB;
+        if (a.birthDate !== b.birthDate) return a.birthDate.localeCompare(b.birthDate);
+        return a.fullName.localeCompare(b.fullName);
+      });
+
+      setResidents(sortedData);
       // Simulate network delay for UX feedback
       await new Promise(resolve => setTimeout(resolve, 800));
       showToast('Data berhasil disinkronkan');
-    } catch (error) {
-      showToast('Sinkronisasi gagal', 'error');
-      handleFirestoreError(error, OperationType.LIST, 'residents');
+    } catch (error: any) {
+      console.error('Manual sync error:', error);
+      showToast(`Sinkronisasi gagal: ${error.message || 'Error tidak diketahui'}`, 'error');
     } finally {
       setSyncing(false);
     }
@@ -394,6 +445,86 @@ export default function App() {
       return matchSearch;
     });
   }, [mutations, searchTerm]);
+
+  if (showSplash) {
+    return (
+      <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-[100] overflow-hidden">
+        {/* Background glow effects */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute top-1/4 left-1/4 w-[300px] h-[300px] bg-emerald-600/5 blur-[100px] rounded-full pointer-events-none" />
+
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+          className="relative flex flex-col items-center"
+        >
+          {/* Logo Icon */}
+          <div className="relative mb-8">
+            <motion.div
+              animate={{ 
+                rotate: [0, 90, 180, 270, 360],
+                scale: [1, 1.1, 1]
+              }}
+              transition={{ 
+                duration: 20, 
+                repeat: Infinity, 
+                ease: "linear" 
+              }}
+              className="absolute -inset-4 bg-gradient-to-tr from-indigo-500/20 to-emerald-500/20 blur-xl rounded-2xl"
+            />
+            <div className="w-24 h-24 bg-slate-900 border border-white/10 rounded-3xl flex items-center justify-center shadow-2xl relative overflow-hidden group">
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.5, duration: 0.8 }}
+              >
+                <Fingerprint className="text-indigo-400" size={48} strokeWidth={1.5} />
+              </motion.div>
+              
+              {/* Scanline effect */}
+              <motion.div
+                animate={{ top: ['-100%', '100%'] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                className="absolute left-0 right-0 h-1/2 bg-gradient-to-b from-transparent via-indigo-500/10 to-transparent pointer-events-none"
+              />
+            </div>
+          </div>
+
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.8, duration: 0.8 }}
+            className="text-center"
+          >
+            <h1 className="text-3xl font-black text-white tracking-widest uppercase mb-2">
+              SISTEM<span className="text-indigo-500">PENDUDUK</span>
+            </h1>
+            <div className="flex items-center justify-center gap-2">
+              <div className="h-[1px] w-8 bg-gradient-to-r from-transparent to-indigo-500/50" />
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.4em]">Smart Identity Hub</p>
+              <div className="h-[1px] w-8 bg-gradient-to-l from-transparent to-indigo-500/50" />
+            </div>
+          </motion.div>
+        </motion.div>
+
+        {/* Bottom Loading Bar */}
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-48">
+          <div className="h-1 w-full bg-slate-900 rounded-full overflow-hidden border border-white/5">
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: '0%' }}
+              transition={{ duration: 2.5, ease: "easeInOut" }}
+              className="h-full w-full bg-gradient-to-r from-indigo-600 to-emerald-500"
+            />
+          </div>
+          <p className="text-[8px] font-black text-slate-600 text-center mt-3 uppercase tracking-widest">
+            Inisialisasi Keamanan...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

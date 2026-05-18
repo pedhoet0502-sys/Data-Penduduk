@@ -797,14 +797,6 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
                       </div>
                     </div>
                   ))}
-                  
-                  {/* Summary Card */}
-                  <div className="lg:col-span-1 bg-gradient-to-br from-indigo-600/20 to-blue-600/20 p-6 rounded-3xl border border-blue-500/20 flex flex-col justify-center">
-                    <p className="text-sm font-bold text-blue-300 mb-2 italic">Analisis Kepemilikan</p>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      Mayoritas keluarga memiliki status tempat tinggal <span className="text-white font-bold">{stats.residenceData[0]?.name}</span> dengan persentase <span className="text-white font-bold">{Math.round((stats.residenceData[0]?.value / (stats.headOfFamilyCount || 1)) * 100)}%</span>.
-                    </p>
-                  </div>
                 </div>
               </div>
             </motion.div>
@@ -892,7 +884,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
                 </h3>
                 
                 <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
-                  <div className="xl:col-span-3 space-y-4">
+                  <div className="xl:col-span-5 space-y-4">
                     {stats.educationData.map((entry, index) => (
                       <div key={index} className="group/edu">
                         <div className="flex justify-between items-end mb-1.5">
@@ -910,23 +902,6 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
                       </div>
                     ))}
                   </div>
-
-                  <div className="xl:col-span-2 flex flex-col justify-center gap-6">
-                    <div className="bg-emerald-500/5 border border-emerald-500/10 p-6 rounded-3xl relative overflow-hidden">
-                      <div className="absolute -top-6 -right-6 text-emerald-500/10">
-                         <GraduationCap size={80} strokeWidth={1} />
-                      </div>
-                      <p className="text-xs font-black uppercase text-emerald-400 tracking-widest mb-3">Analisis Pendidikan</p>
-                      <p className="text-sm text-slate-400 leading-relaxed">
-                        Tingkat pendidikan dominan di wilayah ini adalah <span className="text-white font-bold">{stats.educationData[0]?.name || '-'}</span>.
-                        Data menunjukkan keberagaman profil kompetensi akademik penduduk yang menjadi potensi pengembangan sumber daya manusia desa.
-                      </p>
-                      <div className="mt-4 pt-4 border-t border-emerald-500/10 flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <p className="text-[10px] font-bold text-emerald-300 uppercase tracking-tighter">Update Berdasarkan Data Terbaru</p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
 
@@ -934,11 +909,11 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
               <div className="relative bg-slate-800/30 p-8 rounded-[2.5rem] border border-white/5 overflow-hidden group flex flex-col">
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-cyan-500/10 blur-[80px] rounded-full group-hover:bg-cyan-500/20 transition-colors" />
                 <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                  <Briefcase size={18} className="text-cyan-400" /> Pekerjaan Teratas
+                  <Briefcase size={18} className="text-cyan-400" /> Status Pekerjaan
                 </h3>
                 
                 <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
-                  <div className="xl:col-span-3 space-y-4">
+                  <div className="xl:col-span-5 space-y-4">
                     {stats.occupationData.slice(0, 5).map((entry, index) => (
                       <div key={index} className="group/occ">
                         <div className="flex justify-between items-end mb-1.5">
@@ -955,23 +930,6 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
                         </div>
                       </div>
                     ))}
-                  </div>
-
-                  <div className="xl:col-span-2 flex flex-col justify-center gap-6">
-                    <div className="bg-cyan-500/5 border border-cyan-500/10 p-6 rounded-3xl relative overflow-hidden">
-                      <div className="absolute -top-6 -right-6 text-cyan-500/10">
-                         <Briefcase size={80} strokeWidth={1} />
-                      </div>
-                      <p className="text-xs font-black uppercase text-cyan-400 tracking-widest mb-3">Analisis Ekonomi</p>
-                      <p className="text-sm text-slate-400 leading-relaxed">
-                        Sektor pekerjaan terbesar didominasi oleh <span className="text-white font-bold">{stats.occupationData[0]?.name || '-'}</span>.
-                        Hal ini mencerminkan basis ekonomi utama warga yang sangat dipengaruhi oleh karakteristik geografis dan potensi lokal wilayah tersebut.
-                      </p>
-                      <div className="mt-4 pt-4 border-t border-cyan-500/10 flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
-                        <p className="text-[10px] font-bold text-cyan-300 uppercase tracking-tighter">Struktur Mata Pencaharian</p>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
