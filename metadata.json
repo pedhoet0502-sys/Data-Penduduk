@@ -2,5 +2,5 @@
   "name": "DATA WARGA RT 05 RW 02",
   "description": "Sistem informasi manajemen data warga RT 05 RW 02 dengan fitur statistik demografi dan pendataan lengkap.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
