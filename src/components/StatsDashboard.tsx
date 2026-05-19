@@ -34,14 +34,24 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1
+      staggerChildren: 0.1,
+      delayChildren: 0.2
     }
   }
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 }
+  hidden: { opacity: 0, y: 20, filter: 'blur(10px)' },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    filter: 'blur(0px)',
+    transition: {
+      type: "spring" as const,
+      damping: 25,
+      stiffness: 300
+    }
+  }
 };
 
 export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose, residents, mutations }) => {
@@ -282,55 +292,49 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 bg-[#020617] overflow-hidden">
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="absolute inset-0 bg-slate-950/80 backdrop-blur-md"
-        />
-        
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          initial={{ opacity: 0, scale: 0.98, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative w-full max-w-5xl bg-slate-900 border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+          exit={{ opacity: 0, scale: 0.98, y: 20 }}
+          transition={{ type: "spring", damping: 25, stiffness: 250 }}
+          className="relative w-full h-full bg-slate-900 flex flex-col"
+          id="stats-dashboard-container"
         >
-          <div className="p-8 border-b border-white/5 flex items-center justify-between bg-slate-950/30">
+          <div className="p-6 sm:p-8 border-b border-white/5 flex items-center justify-between bg-slate-950/30">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20">
+              <div className="w-12 h-12 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/30 flex items-center justify-center">
                 <BarChart3 className="text-white" size={24} />
               </div>
               <div>
-                <h2 className="text-2xl font-black text-white leading-none">Statistik Penduduk</h2>
-                <p className="text-sm text-slate-400 mt-1">Analisis demografi berdasarkan usia dan kategori</p>
+                <h2 className="text-xl sm:text-2xl font-black text-white leading-none uppercase tracking-tight">Statistik Penduduk</h2>
+                <p className="text-[10px] sm:text-xs text-slate-400 font-bold tracking-widest uppercase mt-1.5 opacity-60">Analisis demografi & dinamika warga</p>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl transition-colors">
+            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl transition-all border border-white/5 bg-white/5 shadow-sm">
               <X size={24} className="text-slate-400" />
             </button>
           </div>
 
           <motion.div 
-            className="flex-1 overflow-y-auto p-8 custom-scrollbar"
+            className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-8 custom-scrollbar"
             variants={containerVariants}
             initial="hidden"
             animate="visible"
           >
             {/* Demographic Overview */}
             <motion.div variants={itemVariants} className="mb-10">
-              <div className="bg-slate-950/40 border border-white/5 rounded-[2.5rem] p-8 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+              <div className="bg-slate-950/40 border border-white/5 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 sm:p-8 opacity-10 group-hover:opacity-20 transition-opacity">
                   <Database size={120} className="text-indigo-500" />
                 </div>
                 
-                <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3">
-                  <div className="w-2 h-8 bg-indigo-500 rounded-full" />
+                <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3 uppercase tracking-tight">
+                  <div className="w-2 h-8 bg-indigo-500 rounded-full shadow-[0_0_12px_rgba(99,102,241,0.4)]" />
                   Ikhtisar Demografi
                 </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 relative z-10">
                   <div className="space-y-6">
                     <div>
                       <h4 className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.2em] mb-3">Statistik Utama</h4>
@@ -412,14 +416,14 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
 
             {/* Vital Statistics (Population Dynamics) */}
             <motion.div variants={itemVariants} className="mb-10">
-              <div className="bg-slate-950/40 border border-white/5 rounded-[2.5rem] p-8 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+              <div className="bg-slate-950/40 border border-white/5 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 sm:p-8 opacity-10 group-hover:opacity-20 transition-opacity">
                   <History size={120} className="text-emerald-500" />
                 </div>
                 
-                <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3">
-                  <div className="w-2 h-8 bg-emerald-500 rounded-full" />
-                  Dinamika Penduduk (Vital Statistics)
+                <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3 uppercase tracking-tight">
+                  <div className="w-2 h-8 bg-emerald-500 rounded-full shadow-[0_0_12px_rgba(16,185,129,0.4)]" />
+                  Dinamika Penduduk
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10 mb-8">
@@ -494,7 +498,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
                   <PieIcon size={18} className="text-indigo-400" /> Distribusi Gender
                 </h3>
                 
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
                   <div className="h-[220px] w-[220px] relative">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
@@ -549,7 +553,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
 
             {/* Age Category Bar Chart */}
             <motion.div variants={itemVariants} className="mb-10">
-              <div className="relative bg-slate-800/30 p-8 rounded-[2.5rem] border border-white/5 overflow-hidden group">
+              <div className="relative bg-slate-800/30 p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-white/5 overflow-hidden group">
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/10 blur-[80px] rounded-full group-hover:bg-indigo-500/20 transition-colors" />
                 <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                   <BarChart3 size={18} className="text-amber-400" /> Distribusi Kategori Usia
@@ -607,8 +611,8 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
 
             {/* Age Analysis Title */}
             <motion.div variants={itemVariants} className="flex items-center gap-3 mb-6 mt-10">
-              <div className="w-10 h-1 bg-indigo-500 rounded-full" />
-              <h3 className="text-xl font-black text-white">Analisis Demografi Usia</h3>
+              <div className="w-10 h-1 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.3)]" />
+              <h3 className="text-lg font-black text-white uppercase tracking-tight">Analisis Demografi Usia</h3>
             </motion.div>
  
             <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
@@ -633,7 +637,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
  
             {/* Pyramid Chart: Age Groups */}
             <motion.div variants={itemVariants} className="mb-10">
-              <div className="relative bg-slate-800/30 p-8 rounded-[2.5rem] border border-white/5 group">
+              <div className="relative bg-slate-800/30 p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-white/5 group">
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/10 blur-[80px] rounded-full group-hover:bg-indigo-500/20 transition-colors" />
                 <div className="flex items-center justify-between mb-8">
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -653,7 +657,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
 
                 <div className="flex items-stretch justify-center h-[550px] w-full gap-1 sm:gap-2 lg:gap-4 mt-6">
                   {/* Left: Male Chart */}
-                  <div className="flex-1 h-full">
+                  <div className="flex-1 h-full min-w-0">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart 
                         layout="vertical" 
@@ -709,7 +713,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
                   </div>
 
                   {/* Right: Female Chart */}
-                  <div className="flex-1 h-full">
+                  <div className="flex-1 h-full min-w-0">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart 
                         layout="vertical" 
@@ -764,7 +768,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
 
             {/* Residence Status Section */}
             <motion.div variants={itemVariants} className="mb-10">
-              <div className="relative bg-slate-800/30 p-8 rounded-[2.5rem] border border-white/5 overflow-hidden group">
+              <div className="relative bg-slate-800/30 p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-white/5 overflow-hidden group">
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/10 blur-[80px] rounded-full group-hover:bg-blue-500/20 transition-colors" />
                 <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                   <Home size={18} className="text-blue-400" /> Status Tempat Tinggal
@@ -803,7 +807,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
  
             {/* Donut Chart: Dependency Ratio */}
             <motion.div variants={itemVariants} className="mb-10">
-              <div className="relative bg-slate-800/30 p-8 rounded-[2.5rem] border border-white/5 overflow-hidden group">
+              <div className="relative bg-slate-800/30 p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-white/5 overflow-hidden group">
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/10 blur-[80px] rounded-full group-hover:bg-emerald-500/20 transition-colors" />
                 <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                   <PieIcon size={18} className="text-emerald-400" /> Rasio Ketergantungan (Dependency Ratio)
@@ -875,9 +879,9 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
               <h3 className="text-xl font-black text-white">Distribusi Lainnya</h3>
             </motion.div>
  
-            <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-10">
+            <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 pb-10">
               {/* Education Distribution Simplified List */}
-              <div className="relative bg-slate-800/30 p-8 rounded-[2.5rem] border border-white/5 overflow-hidden group flex flex-col">
+              <div className="relative bg-slate-800/30 p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-white/5 overflow-hidden group flex flex-col">
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/10 blur-[80px] rounded-full group-hover:bg-emerald-500/20 transition-colors" />
                 <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                   <GraduationCap size={18} className="text-emerald-400" /> Distribusi Tingkat Pendidikan
@@ -906,7 +910,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
               </div>
 
               {/* Simplified Top Occupations List */}
-              <div className="relative bg-slate-800/30 p-8 rounded-[2.5rem] border border-white/5 overflow-hidden group flex flex-col">
+              <div className="relative bg-slate-800/30 p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-white/5 overflow-hidden group flex flex-col">
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-cyan-500/10 blur-[80px] rounded-full group-hover:bg-cyan-500/20 transition-colors" />
                 <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                   <Briefcase size={18} className="text-cyan-400" /> Status Pekerjaan
@@ -935,10 +939,10 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
               </div>
 
               {/* Social & Health Stats Section */}
-              <div className="lg:col-span-2 mt-8 space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-2 mt-4 sm:mt-8 space-y-4 sm:space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                   {/* Status KTP Distribution */}
-                  <div className="bg-slate-800/40 p-6 rounded-[2rem] border border-white/5 relative overflow-hidden group">
+                  <div className="bg-slate-800/40 p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 relative overflow-hidden group">
                     <div className="absolute -top-12 -right-12 w-24 h-24 bg-sky-500/5 blur-3xl rounded-full" />
                     <h4 className="text-xs font-black uppercase text-sky-400 tracking-widest mb-4 flex items-center gap-2">
                        Status KTP
@@ -962,7 +966,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
                   </div>
 
                   {/* Religion Distribution */}
-                  <div className="bg-slate-800/40 p-6 rounded-[2rem] border border-white/5 relative overflow-hidden group">
+                  <div className="bg-slate-800/40 p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 relative overflow-hidden group">
                     <div className="absolute -top-12 -right-12 w-24 h-24 bg-indigo-500/5 blur-3xl rounded-full" />
                     <h4 className="text-xs font-black uppercase text-indigo-400 tracking-widest mb-4 flex items-center gap-2">
                        Agama
@@ -986,7 +990,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
                   </div>
 
                   {/* Marital Status Distribution */}
-                  <div className="bg-slate-800/40 p-6 rounded-[2rem] border border-white/5 relative overflow-hidden group">
+                  <div className="bg-slate-800/40 p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 relative overflow-hidden group">
                     <div className="absolute -top-12 -right-12 w-24 h-24 bg-pink-500/5 blur-3xl rounded-full" />
                     <h4 className="text-xs font-black uppercase text-pink-400 tracking-widest mb-4 flex items-center gap-2">
                        Status Perkawinan
@@ -1010,7 +1014,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
                   </div>
 
                   {/* Blood Type Distribution */}
-                  <div className="bg-slate-800/40 p-6 rounded-[2rem] border border-white/5 relative overflow-hidden group">
+                  <div className="bg-slate-800/40 p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 relative overflow-hidden group">
                     <div className="absolute -top-12 -right-12 w-24 h-24 bg-rose-500/5 blur-3xl rounded-full" />
                     <h4 className="text-xs font-black uppercase text-rose-400 tracking-widest mb-4 flex items-center gap-2">
                        Golongan Darah

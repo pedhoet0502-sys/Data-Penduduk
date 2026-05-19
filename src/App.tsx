@@ -66,6 +66,7 @@ export default function App() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [isMutationFormOpen, setIsMutationFormOpen] = useState(false);
+  const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
   const [editingResident, setEditingResident] = useState<Resident | null>(null);
   const [viewingResident, setViewingResident] = useState<Resident | null>(null);
   const [mutationResident, setMutationResident] = useState<Resident | null>(null);
@@ -754,58 +755,81 @@ export default function App() {
           </div>
 
           <button
-            onClick={() => window.close()}
+            onClick={() => setIsExitConfirmOpen(true)}
             className="w-full mt-8 text-slate-600 text-xs font-bold uppercase tracking-[0.2em] hover:text-slate-400 transition-colors flex items-center justify-center gap-2"
           >
             <LogOut size={14} /> Keluar Aplikasi
           </button>
+
+          <ConfirmationModal
+            isOpen={isExitConfirmOpen}
+            onClose={() => setIsExitConfirmOpen(false)}
+            onConfirm={() => {
+              window.close();
+              // Fallback for browsers that don't allow window.close()
+              setTimeout(() => {
+                window.location.href = "about:blank";
+              }, 300);
+            }}
+            title="Keluar Aplikasi"
+            message="Apakah Anda yakin ingin menutup dan keluar dari aplikasi kependudukan ini?"
+            confirmText="Keluar"
+            cancelText="Batal"
+            type="info"
+          />
         </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 pb-24">
+    <div className="min-h-screen bg-[#020617] text-slate-100 pt-20 pb-24 overflow-x-hidden w-full max-w-full">
       {/* Header */}
-      <header className="h-16 border-b border-white/10 sticky top-0 z-30 px-6 bg-slate-900/50 backdrop-blur-md flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
-            <Fingerprint size={18} />
+      <header className="h-20 border-b border-white/5 fixed top-0 left-0 right-0 z-50 px-4 sm:px-8 bg-[#020617] backdrop-blur-xl flex items-center">
+        <div className="w-full flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-11 h-11 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-600/30">
+              <Fingerprint size={24} />
+            </div>
+            <div className="flex flex-col justify-center">
+              <h1 className="font-black text-lg sm:text-xl text-white tracking-tight uppercase leading-none">DATA KEPENDUDUKAN</h1>
+              <p className="text-[11px] sm:text-sm text-slate-400 font-bold tracking-widest mt-1.5">RT 05 RW 02</p>
+            </div>
           </div>
-          <h1 className="font-bold text-lg text-white tracking-tight uppercase">RT 05 RW 02 <span className="font-normal text-slate-400 text-sm hidden sm:inline">| Data Warga</span></h1>
-        </div>
-        <div className="flex items-center gap-1 sm:gap-2">
-          <button
-            onClick={() => setIsStatsOpen(true)}
-            className="flex items-center gap-2 px-2 sm:px-3 py-2 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-xl transition-all relative group"
-            title="Liat Statistik"
-          >
-            <BarChart3 size={18} />
-            <span className="text-xs font-bold hidden md:inline">Statistik</span>
-            {hasNewData && (
-              <span className="absolute top-2 right-2 w-2 h-2 bg-emerald-500 rounded-full border border-slate-900 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-            )}
-          </button>
-          <button
-            onClick={handleManualSync}
-            disabled={syncing || !isOnline}
-            className={`p-2 rounded-lg transition-all ${syncing ? 'text-indigo-400 animate-spin' : (!isOnline ? 'text-slate-600 cursor-not-allowed' : 'text-slate-400 hover:text-white')}`}
-            title={isOnline ? "Sinkronisasi Manual" : "Tidak ada koneksi internet"}
-          >
-            <RefreshCcw size={18} />
-          </button>
-          <button
-            onClick={handleSignOut}
-            className="p-2 text-slate-400 hover:text-white transition-colors"
-            id="logout-btn"
-          >
-            <LogOut size={18} />
-          </button>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              onClick={() => setIsStatsOpen(true)}
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-xl transition-all relative group"
+              title="Liat Statistik"
+            >
+              <BarChart3 size={24} />
+              <span className="text-sm font-bold hidden md:inline">Statistik</span>
+              {hasNewData && (
+                <span className="absolute top-2.5 right-2 sm:right-3 w-2 h-2 bg-emerald-500 rounded-full border border-slate-900 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+              )}
+            </button>
+            <button
+              onClick={handleManualSync}
+              disabled={syncing || !isOnline}
+              className={`p-2.5 rounded-xl transition-all ${syncing ? 'text-indigo-400 animate-spin' : (!isOnline ? 'text-slate-600 cursor-not-allowed' : 'text-slate-400 hover:text-white hover:bg-white/5')}`}
+              title={isOnline ? "Sinkronisasi Manual" : "Tidak ada koneksi internet"}
+            >
+              <RefreshCcw size={24} />
+            </button>
+            <button
+              onClick={handleSignOut}
+              className="p-2.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all"
+              id="logout-btn"
+              title="Keluar"
+            >
+              <LogOut size={24} />
+            </button>
+          </div>
         </div>
       </header>
 
       {/* Tab Switcher */}
-      <div className="px-6 mt-6 max-w-2xl mx-auto">
+      <div className="px-3 sm:px-6 mt-6 w-full">
         <div className="flex p-1 bg-slate-900/80 rounded-2xl border border-white/5 shadow-inner">
           <button
             onClick={() => setActiveTab('residents')}
@@ -822,7 +846,7 @@ export default function App() {
         </div>
       </div>
 
-      <main className="px-4 sm:px-6 py-6 max-w-5xl mx-auto w-full">
+      <main className="px-3 sm:px-6 py-6 w-full">
         {/* Offline Banner */}
         <AnimatePresence>
           {!isOnline && (
@@ -844,25 +868,7 @@ export default function App() {
         </AnimatePresence>
 
         {/* Sync Status Overlay (Mobile friendly feedback) */}
-        {!syncing && residents.length > 0 && (
-          <div className={`mb-4 flex items-center justify-between px-4 py-2 border rounded-2xl w-full ${isOnline ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-amber-500/5 border-amber-500/10'}`}>
-            <div className="flex items-center gap-2">
-              {isOnline ? (
-                <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
-              ) : (
-                <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
-              )}
-              <span className={`text-[10px] font-black uppercase tracking-widest ${isOnline ? 'text-emerald-500/80' : 'text-amber-500/80'}`}>
-                {isOnline ? 'Cloud Terhubung' : 'Mode Luring'}
-              </span>
-            </div>
-            {lastSyncTime && (
-              <span className="text-[9px] font-medium text-slate-500">
-                Sinkronisasi: {format(lastSyncTime, 'HH:mm:ss')}
-              </span>
-            )}
-          </div>
-        )}
+
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-8 cursor-pointer group" onClick={() => setIsStatsOpen(true)}>
           {/* Row 1: Total, KK, & New */}
@@ -888,20 +894,6 @@ export default function App() {
             </div>
           </div>
           
-          <div className="bg-indigo-600 p-4 rounded-3xl shadow-lg shadow-indigo-600/20 text-white group-hover:bg-indigo-500 transition-all flex flex-col justify-between sm:col-span-2 lg:col-span-1">
-            <span className="text-[9px] uppercase font-black text-indigo-200 tracking-[0.2em] block leading-none mb-2">Data Baru</span>
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-black leading-none tracking-tighter">{residents.filter(r => {
-                const created = r.createdAt?.toDate ? r.createdAt.toDate() : (r.createdAt ? new Date(r.createdAt) : null);
-                if (!created) return false;
-                return (new Date().getTime() - created.getTime()) < 24 * 60 * 60 * 1000;
-              }).length}</span>
-              <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
-                <TrendingUp size={14} className="text-indigo-100" />
-              </div>
-            </div>
-          </div>
-
           <div className="grid grid-cols-2 gap-3 col-span-1 sm:col-span-2 lg:col-span-3">
             {/* Row 2: Male & Female */}
             <div className="bg-slate-900/60 p-4 rounded-3xl border border-white/10 shadow-sm group-hover:border-indigo-500/50 transition-all flex flex-col justify-center min-w-0">
@@ -934,6 +926,20 @@ export default function App() {
               </div>
             </div>
           </div>
+
+          <div className="bg-indigo-600 p-4 rounded-3xl shadow-lg shadow-indigo-600/20 text-white group-hover:bg-indigo-500 transition-all flex flex-col justify-between sm:col-span-2 lg:col-span-3">
+            <span className="text-[9px] uppercase font-black text-indigo-200 tracking-[0.2em] block leading-none mb-2">Data Baru</span>
+            <div className="flex items-center justify-between">
+              <span className="text-2xl font-black leading-none tracking-tighter">{residents.filter(r => {
+                const created = r.createdAt?.toDate ? r.createdAt.toDate() : (r.createdAt ? new Date(r.createdAt) : null);
+                if (!created) return false;
+                return (new Date().getTime() - created.getTime()) < 24 * 60 * 60 * 1000;
+              }).length}</span>
+              <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
+                <TrendingUp size={14} className="text-indigo-100" />
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Search & Filter */}
@@ -947,13 +953,13 @@ export default function App() {
               placeholder="Cari Nama, NIK, atau No. KK..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-950/50 border border-white/10 rounded-2xl py-4 pl-12 pr-4 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm font-medium text-white placeholder:text-slate-600"
+              className="w-full bg-slate-950/50 border border-slate-700/80 hover:border-indigo-500/50 focus:border-indigo-500/80 rounded-2xl py-4 pl-12 pr-4 shadow-md focus:ring-2 focus:ring-indigo-500/30 outline-none transition-all text-sm font-medium text-white placeholder:text-slate-500"
               id="search-input"
             />
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`p-4 rounded-2xl border transition-all flex items-center justify-center gap-2 relative ${showFilters ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20' : 'bg-slate-900/40 border-white/10 text-slate-400 hover:text-white'}`}
+            className={`p-4 rounded-2xl border transition-all flex items-center justify-center gap-2 relative ${showFilters ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/30' : 'bg-slate-900/40 border-slate-700/80 hover:border-indigo-500/50 text-slate-400 hover:text-white hover:bg-slate-900/60'}`}
             title="Filter Data"
           >
             <SlidersHorizontal size={20} />
@@ -1085,11 +1091,6 @@ export default function App() {
                 <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
                   Daftar Penduduk ({filteredResidents.length} Jiwa | {filteredResidents.filter(r => r.familyPosition === 'Kepala Keluarga').length} KK)
                 </h2>
-                {filteredResidents.length > 0 && (
-                  <span className="text-[10px] font-bold text-slate-600 bg-slate-900 px-2 py-0.5 rounded-full border border-white/5">
-                    Aktif & Valid
-                  </span>
-                )}
               </div>
               {filteredResidents.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

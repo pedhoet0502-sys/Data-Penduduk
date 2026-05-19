@@ -64,14 +64,23 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 bg-[#020617] overflow-hidden">
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
-          className="bg-slate-900 w-full max-w-2xl rounded-2xl border border-white/10 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          className="relative bg-slate-900 w-full h-full flex flex-col"
           id="resident-detail-container"
         >
+          {/* Close Button - Absolute Positioning for better visibility */}
+          <button 
+            onClick={onClose} 
+            className="absolute top-4 right-4 z-10 p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all border border-white/20 bg-slate-900/30 backdrop-blur-sm shadow-sm"
+            title="Tutup"
+          >
+            <X size={24} strokeWidth={2.5} />
+          </button>
+
           {/* Header */}
           <div className="p-6 border-b border-white/10 flex items-center justify-between bg-slate-950/30">
             <div className="flex items-center gap-4">
@@ -103,9 +112,6 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
                 </div>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors">
-              <X size={24} className="text-slate-400" />
-            </button>
           </div>
 
           {/* Content */}
@@ -220,23 +226,23 @@ export const ResidentDetail: React.FC<ResidentDetailProps> = ({ isOpen, onClose,
             </div>
 
             {/* Constructive Actions (Right) */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               {!isReadOnly && (resident.status || ResidentStatus.ACTIVE) === ResidentStatus.ACTIVE && onAddMutation && (
                 <button
                   onClick={() => onAddMutation(resident)}
-                  className="w-12 h-12 bg-slate-800/80 text-indigo-400 border border-white/5 hover:bg-slate-800 hover:text-indigo-300 rounded-xl transition-all flex items-center justify-center shadow-inner"
+                  className="p-2 text-indigo-400 hover:text-indigo-300 transition-all flex items-center justify-center"
                   title="Tambah Peristiwa / Mutasi"
                 >
-                  <History size={20} />
+                  <History size={24} />
                 </button>
               )}
               {!isReadOnly && (
                 <button 
                   onClick={() => onEdit(resident)}
-                  className="w-12 h-12 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center transform active:scale-95 border border-indigo-500/30"
+                  className="p-2 text-indigo-400 hover:text-indigo-300 transition-all flex items-center justify-center transform active:scale-95"
                   title="Ubah Data Penduduk"
                 >
-                  <Edit2 size={20} />
+                  <Edit2 size={24} />
                 </button>
               )}
             </div>
