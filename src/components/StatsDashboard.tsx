@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, PieChart as PieIcon, BarChart3, TrendingUp, Users, User, Calendar, Briefcase, Database, Mars, Venus, Fingerprint, GraduationCap, Baby, Skull, UserPlus, UserMinus, History, Home } from 'lucide-react';
+import { X, PieChart as PieIcon, BarChart3, TrendingUp, Users, User, Calendar, Briefcase, Database, Mars, Venus, Fingerprint, GraduationCap, Baby, Skull, UserPlus, UserMinus, History, Home, Cloud } from 'lucide-react';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, Cell as RechartsCell,
@@ -264,6 +264,17 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
 
+    const mutationTrend = last6Months;
+
+    // Mock Cloud Data (Custom addition)
+    const cloudStats = {
+      account: "konyen70@gmail.com",
+      capacity: 15, // GB
+      used: 4.8, // GB
+      get usedPercentage() { return Math.round((this.used / this.capacity) * 100); },
+      get remainingPercentage() { return 100 - this.usedPercentage; }
+    };
+
     return {
       ageData,
       pyramidData,
@@ -284,7 +295,8 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
       avgAge: residents.length > 0 ? (totalAge / residents.length).toFixed(1) : 0,
       total: residents.length,
       mutationCounts,
-      mutationTrend: last6Months
+      mutationTrend,
+      cloudStats
     };
   }, [residents, mutations]);
 
@@ -1029,6 +1041,54 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose,
                            <p className="text-[10px] text-slate-500">{data.value} Jiwa</p>
                         </div>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* Cloud Storage Information */}
+                  <div className="bg-slate-800/40 p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 relative overflow-hidden group md:col-span-2 lg:col-span-4">
+                    <div className="absolute -top-12 -right-12 w-24 h-24 bg-indigo-500/5 blur-3xl rounded-full" />
+                    <h4 className="text-xs font-black uppercase text-indigo-400 tracking-widest mb-6 flex items-center gap-2">
+                       <Cloud size={14} /> Informasi Database Cloud
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                      <div className="bg-slate-900/40 p-4 rounded-2xl border border-white/5">
+                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Akun Cloud</p>
+                        <p className="text-sm font-black text-white truncate">{stats.cloudStats.account}</p>
+                      </div>
+                      
+                      <div className="bg-slate-900/40 p-4 rounded-2xl border border-white/5">
+                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Kapasitas</p>
+                        <p className="text-xl font-black text-white">{stats.cloudStats.capacity} <span className="text-xs font-normal text-slate-500">GB</span></p>
+                      </div>
+                      
+                      <div className="bg-slate-900/40 p-4 rounded-2xl border border-white/5">
+                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Terpakai</p>
+                        <p className="text-xl font-black text-white">{stats.cloudStats.used} <span className="text-xs font-normal text-slate-500">GB</span></p>
+                      </div>
+                      
+                      <div className="bg-slate-900/40 p-4 rounded-2xl border border-white/5">
+                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Sisa Kapasitas</p>
+                        <div className="flex items-baseline gap-2">
+                          <p className="text-xl font-black text-emerald-400">{stats.cloudStats.remainingPercentage}%</p>
+                          <p className="text-[10px] font-bold text-slate-500 uppercase">Tersedia</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-6">
+                      <div className="flex justify-between items-end mb-2">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Penggunaan Kapasitas</p>
+                        <p className="text-xs font-black text-white">{stats.cloudStats.usedPercentage}%</p>
+                      </div>
+                      <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden border border-white/5">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${stats.cloudStats.usedPercentage}%` }}
+                          transition={{ duration: 1.5, ease: "easeOut" }}
+                          className="h-full bg-gradient-to-r from-indigo-600 to-indigo-400 rounded-full shadow-[0_0_12px_rgba(99,102,241,0.3)]"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckCircle2, XCircle, X } from 'lucide-react';
+import { CheckCircle2, XCircle, X, Info } from 'lucide-react';
 
-export type ToastType = 'success' | 'error';
+export type ToastType = 'success' | 'error' | 'info';
 
 interface ToastProps {
   message: string;
@@ -40,11 +40,15 @@ export const Toast: React.FC<ToastProps> = ({
               flex items-center gap-3 p-4 rounded-2xl border shadow-2xl backdrop-blur-xl
               ${type === 'success' 
                 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                : type === 'info'
+                ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
                 : 'bg-rose-500/10 border-rose-500/20 text-rose-400'}
             `}
           >
             {type === 'success' ? (
               <CheckCircle2 size={20} className="shrink-0" />
+            ) : type === 'info' ? (
+              <Info size={20} className="shrink-0" />
             ) : (
               <XCircle size={20} className="shrink-0" />
             )}

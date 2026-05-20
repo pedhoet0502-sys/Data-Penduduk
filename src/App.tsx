@@ -67,10 +67,145 @@ export default function App() {
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [isMutationFormOpen, setIsMutationFormOpen] = useState(false);
   const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
+  const [isScrolling, setIsScrolling] = useState(false);
   const [editingResident, setEditingResident] = useState<Resident | null>(null);
+
+  useEffect(() => {
+    let scrollTimeout: any = null;
+
+    const handleScroll = () => {
+      setIsScrolling(true);
+
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
+
+      scrollTimeout = setTimeout(() => {
+        setIsScrolling(false);
+      }, 250);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+    };
+  }, []);
+
   const [viewingResident, setViewingResident] = useState<Resident | null>(null);
   const [mutationResident, setMutationResident] = useState<Resident | null>(null);
   const [residentIdToDelete, setResidentIdToDelete] = useState<string | null>(null);
+  
+  // Native back button intercept & double-press to exit logic
+  const [lastBackPress, setLastBackPress] = useState<number>(0);
+
+  useEffect(() => {
+    // Push an initial history state to enable back-button interception
+    window.history.pushState({ page: 'home' }, '');
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (isFormOpen) {
+        setIsFormOpen(false);
+        setEditingResident(null);
+        window.history.pushState({ page: 'home' }, '');
+      } else if (isDetailOpen) {
+        setIsDetailOpen(false);
+        setViewingResident(null);
+        window.history.pushState({ page: 'home' }, '');
+      } else if (isStatsOpen) {
+        setIsStatsOpen(false);
+        window.history.pushState({ page: 'home' }, '');
+      } else if (isMutationFormOpen) {
+        setIsMutationFormOpen(false);
+        setMutationResident(null);
+        window.history.pushState({ page: 'home' }, '');
+      } else if (isConfirmOpen) {
+        setIsConfirmOpen(false);
+        setResidentIdToDelete(null);
+        window.history.pushState({ page: 'home' }, '');
+      } else if (isExitConfirmOpen) {
+        setIsExitConfirmOpen(false);
+        window.history.pushState({ page: 'home' }, '');
+      } else if (showFilters) {
+        setShowFilters(false);
+        window.history.pushState({ page: 'home' }, '');
+      } else {
+        const now = Date.now();
+        if (now - lastBackPress < 2000) {
+          // Double click: close and exit app
+          window.close();
+          setTimeout(() => {
+            window.location.href = "about:blank";
+          }, 300);
+        } else {
+          setLastBackPress(now);
+          showToast("Tekan sekali lagi untuk keluar dari aplikasi", "info");
+          window.history.pushState({ page: 'home' }, '');
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [
+    isFormOpen,
+    isDetailOpen,
+    isStatsOpen,
+    isMutationFormOpen,
+    isConfirmOpen,
+    isExitConfirmOpen,
+    showFilters,
+    lastBackPress
+  ]);
+
+  // Swipe navigation state and gestures
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY
+    });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY
+    });
+  };
+
+  const handleTouchEnd = () => {
+    if (isFormOpen || isDetailOpen || isConfirmOpen || isStatsOpen || isMutationFormOpen || isExitConfirmOpen) {
+      return;
+    }
+    if (!touchStart || !touchEnd) return;
+
+    const diffX = touchStart.x - touchEnd.x;
+    const diffY = touchStart.y - touchEnd.y;
+    const minSwipeDistance = 75; // min distance in pixels
+
+    // Verify horizontal movement was dominant & exceeded threshold
+    if (Math.abs(diffX) > minSwipeDistance && Math.abs(diffX) > Math.abs(diffY)) {
+      if (diffX > 0) {
+        // Swiped left
+        if (activeTab === 'residents') {
+          setActiveTab('mutations');
+        }
+      } else {
+        // Swiped right
+        if (activeTab === 'mutations') {
+          setActiveTab('residents');
+        }
+      }
+    }
+  };
   
   // Toast state
   const [toast, setToast] = useState<{ isVisible: boolean; message: string; type: ToastType }>({
@@ -783,9 +918,14 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 pt-20 pb-24 overflow-x-hidden w-full max-w-full">
+    <div 
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      className="min-h-screen bg-[#020617] text-slate-100 pt-20 pb-24 overflow-x-hidden w-full max-w-full"
+    >
       {/* Header */}
-      <header className="h-20 border-b border-white/5 fixed top-0 left-0 right-0 z-50 px-4 sm:px-8 bg-[#020617] backdrop-blur-xl flex items-center">
+      <header className={`h-20 border-b border-white/5 fixed top-0 left-0 right-0 z-50 px-4 sm:px-8 bg-[#020617] backdrop-blur-xl flex items-center transition-all duration-300 ease-in-out ${isScrolling ? '-translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
         <div className="w-full flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-11 h-11 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-600/30">
@@ -1193,7 +1333,7 @@ export default function App() {
             setEditingResident(null);
             setIsFormOpen(true);
           }}
-          className="fixed bottom-8 right-8 w-16 h-16 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-indigo-600/40 z-40"
+          className={`fixed bottom-8 right-8 w-16 h-16 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-indigo-600/40 z-40 transition-all duration-300 ease-in-out ${isScrolling ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}`}
           id="add-resident-fab"
         >
           <Plus size={32} />
